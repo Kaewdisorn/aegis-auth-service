@@ -4,7 +4,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "NestJS: Development (Debug + Hot Reload)",
+            "name": "Development",
             "runtimeExecutable": "npm",
             "runtimeArgs": [
                 "run",
