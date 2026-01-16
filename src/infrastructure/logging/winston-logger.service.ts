@@ -8,19 +8,19 @@ export class WinstonLoggerService implements ILogger {
 
     constructor() {
         this.logger = winston.createLogger({
-            level: process.env.LOG_LEVEL || 'info',
+            level: process.env.LOG_LEVEL || 'debug',
             format: winston.format.combine(
-                winston.format.timestamp({ format: 'MM/DD/YYYY, h:mm:ss A' }),
+                winston.format.timestamp(),
                 winston.format.errors({ stack: true }),
             ),
             transports: [
                 new winston.transports.Console({
                     format: winston.format.combine(
-                        winston.format.colorize(),
+                        winston.format.colorize({ level: true }),
                         winston.format.printf(({ timestamp, level, message, context, trace }) => {
                             const ctx = context || 'AegisAuthService';
                             const traceStr = trace ? `\n${trace}` : '';
-                            return `[Nest] ${process.pid}  - ${timestamp}     ${level} [${ctx}] ${message}${traceStr}`;
+                            return `${timestamp} [${level}] [${ctx}] ${message}${traceStr}`;
                         }),
                     ),
                 }),
@@ -64,5 +64,4 @@ export class WinstonLoggerService implements ILogger {
     debug(message: string, context?: string): void {
         this.logger.debug(message, { context });
     }
-
 }
