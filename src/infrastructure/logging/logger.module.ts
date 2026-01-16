@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { NestLoggerService } from './winston-logger.service';
+import { WinstonLoggerService } from './winston-logger.service';
 import { ILogger } from '@application/ports/logger.interface';
 
 @Global()
@@ -7,7 +7,7 @@ import { ILogger } from '@application/ports/logger.interface';
     providers: [
         {
             provide: ILogger,
-            useClass: NestLoggerService,
+            useClass: WinstonLoggerService,
         },
     ],
     exports: [ILogger],

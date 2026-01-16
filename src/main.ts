@@ -10,5 +10,8 @@ async function bootstrap() {
 
   await app.listen(port);
   logger.info(`Aegis Auth Service running on port ${port}`);
+  logger.warn(`This is a warning message`);
+  logger.error(`This is an error message`, `Error stack trace example`);
+  logger.debug(`This is a debug message`);
 }
 bootstrap();
