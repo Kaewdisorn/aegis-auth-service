@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ILogger } from '@application/ports/logger.interface';
 import * as winston from 'winston';
 
@@ -6,9 +7,11 @@ import * as winston from 'winston';
 export class WinstonLoggerService implements ILogger {
     private readonly logger: winston.Logger;
 
-    constructor() {
+    constructor(private readonly configService: ConfigService) {
+        const level = this.configService.get<string>('LOG_LEVEL') || 'info';
+
         this.logger = winston.createLogger({
-            level: process.env.LOG_LEVEL || 'debug',
+            level: level,
             format: winston.format.combine(
                 winston.format.timestamp(),
                 winston.format.errors({ stack: true }),
