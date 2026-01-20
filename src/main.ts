@@ -5,14 +5,13 @@ import { ILogger } from '@application/ports/logger.interface';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT') || 3000;
   const logger = app.get(ILogger);
 
+  const configService = app.get(ConfigService);
+  const host = configService.get<string>('HOST') || 'localhost';
+  const port = configService.get<number>('PORT') || 3000;
+
   await app.listen(port);
-  logger.info(`Aegis Auth Service running on port ${port}`);
-  logger.warn(`This is a warning message`);
-  logger.error(`This is an error message`, `Error stack trace example`);
-  logger.debug(`This is a debug message`);
+  logger.info('Aegis Auth Service running on ' + `http://${host}:${port}`);
 }
 bootstrap();
