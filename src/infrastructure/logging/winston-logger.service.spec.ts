@@ -192,4 +192,191 @@ describe('WinstonLoggerService', () => {
             expect(mockWinstonLogger.debug).toHaveBeenCalledWith(message, { context });
         });
     });
+
+    describe('Metadata support', () => {
+        it('should log info with metadata', () => {
+            const message = 'Test message';
+            const context = 'TestContext';
+            const metadata = { userId: '123', action: 'login' };
+
+            service.info(message, context, metadata);
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context,
+                    userId: '123',
+                    action: 'login',
+                    environment: 'development',
+                    serviceName: 'aegis-auth-service',
+                    pid: expect.any(Number),
+                }),
+            );
+        });
+
+        it('should log error with metadata', () => {
+            const message = 'Error occurred';
+            const trace = 'Stack trace';
+            const context = 'ErrorContext';
+            const metadata = { requestId: 'req-123', statusCode: 500 };
+
+            service.error(message, trace, context, metadata);
+
+            expect(mockWinstonLogger.error).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context,
+                    trace,
+                    requestId: 'req-123',
+                    statusCode: 500,
+                }),
+            );
+        });
+
+        it('should log warn with metadata', () => {
+            const message = 'Warning message';
+            const context = 'WarnContext';
+            const metadata = { correlationId: 'corr-456' };
+
+            service.warn(message, context, metadata);
+
+            expect(mockWinstonLogger.warn).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context,
+                    correlationId: 'corr-456',
+                }),
+            );
+        });
+
+        it('should log debug with metadata', () => {
+            const message = 'Debug message';
+            const context = 'DebugContext';
+            const metadata = { query: 'SELECT * FROM users' };
+
+            service.debug(message, context, metadata);
+
+            expect(mockWinstonLogger.debug).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context,
+                    query: 'SELECT * FROM users',
+                }),
+            );
+        });
+    });
+
+    describe('Sensitive data sanitization', () => {
+        it('should redact password from metadata', () => {
+            const message = 'User login attempt';
+            const metadata = { username: 'john', password: 'secret123' };
+
+            service.info(message, 'AuthContext', metadata);
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    username: 'john',
+                    password: '***REDACTED***',
+                }),
+            );
+        });
+
+        it('should redact multiple sensitive fields', () => {
+            const message = 'API call';
+            const metadata = {
+                apiKey: 'key123',
+                token: 'bearer-token',
+                accessToken: 'access123',
+                refreshToken: 'refresh456',
+                userId: '123',
+            };
+
+            service.info(message, 'APIContext', metadata);
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    apiKey: '***REDACTED***',
+                    token: '***REDACTED***',
+                    accessToken: '***REDACTED***',
+                    refreshToken: '***REDACTED***',
+                    userId: '123', // Should not be redacted
+                }),
+            );
+        });
+
+        it('should redact sensitive fields in nested objects', () => {
+            const message = 'Request received';
+            const metadata = {
+                request: {
+                    body: {
+                        username: 'john',
+                        password: 'secret',
+                    },
+                    headers: {
+                        authorization: 'Bearer token123',
+                    },
+                },
+            };
+
+            service.info(message, 'HTTPContext', metadata);
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    request: {
+                        body: {
+                            username: 'john',
+                            password: '***REDACTED***',
+                        },
+                        headers: {
+                            authorization: '***REDACTED***',
+                        },
+                    },
+                }),
+            );
+        });
+
+        it('should handle arrays in metadata', () => {
+            const message = 'Batch operation';
+            const metadata = {
+                users: [
+                    { username: 'user1', password: 'pass1' },
+                    { username: 'user2', token: 'token2' },
+                ],
+            };
+
+            service.info(message, 'BatchContext', metadata);
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    users: [
+                        { username: 'user1', password: '***REDACTED***' },
+                        { username: 'user2', token: '***REDACTED***' },
+                    ],
+                }),
+            );
+        });
+    });
+
+    describe('Metadata enrichment', () => {
+        it('should enrich metadata with environment info', () => {
+            const message = 'Test message';
+            const metadata = { customField: 'value' };
+
+            service.info(message, 'TestContext', metadata);
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    customField: 'value',
+                    environment: 'development',
+                    serviceName: 'aegis-auth-service',
+                    pid: expect.any(Number),
+                }),
+            );
+        });
+    });
 });

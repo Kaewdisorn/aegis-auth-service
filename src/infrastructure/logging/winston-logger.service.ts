@@ -1,11 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ILogger } from '@application/ports/logger.interface';
+import { ILogger, LogMetadata } from '@application/ports/logger.interface';
 import * as winston from 'winston';
 
 @Injectable()
 export class WinstonLoggerService implements ILogger {
     private readonly logger: winston.Logger;
+    private readonly sensitiveFields = [
+        'password',
+        'token',
+        'accessToken',
+        'refreshToken',
+        'authorization',
+        'cookie',
+        'secret',
+        'apiKey',
+        'creditCard',
+        'ssn',
+    ];
 
     constructor(private readonly configService: ConfigService) {
         const level = this.configService.get<string>('LOG_LEVEL') || 'info';
@@ -20,10 +32,13 @@ export class WinstonLoggerService implements ILogger {
                 new winston.transports.Console({
                     format: winston.format.combine(
                         winston.format.colorize({ level: true }),
-                        winston.format.printf(({ timestamp, level, message, context, trace }) => {
+                        winston.format.printf(({ timestamp, level, message, context, trace, ...meta }) => {
                             const ctx = context || 'AegisAuthService';
                             const traceStr = trace ? `\n${trace}` : '';
-                            return `${timestamp} [${level}] [${ctx}] ${message}${traceStr}`;
+                            const metaStr = Object.keys(meta).length > 0
+                                ? `\n${JSON.stringify(this.sanitizeMetadata(meta), null, 2)}`
+                                : '';
+                            return `${timestamp} [${level}] [${ctx}] ${message}${metaStr}${traceStr}`;
                         }),
                     ),
                 }),
@@ -52,19 +67,67 @@ export class WinstonLoggerService implements ILogger {
         // }
     }
 
-    info(message: string, context?: string): void {
-        this.logger.info(message, { context });
+
+    private sanitizeMetadata(metadata: any): any {
+        if (!metadata || typeof metadata !== 'object') {
+            return metadata;
+        }
+
+        if (Array.isArray(metadata)) {
+            return metadata.map(item => this.sanitizeMetadata(item));
+        }
+
+        const sanitized: any = {};
+        for (const [key, value] of Object.entries(metadata)) {
+            const lowerKey = key.toLowerCase();
+
+            // Check if the key contains sensitive information
+            const isSensitive = this.sensitiveFields.some(field =>
+                lowerKey.includes(field.toLowerCase())
+            );
+
+            if (isSensitive) {
+                sanitized[key] = '***REDACTED***';
+            } else if (value && typeof value === 'object') {
+                sanitized[key] = this.sanitizeMetadata(value);
+            } else {
+                sanitized[key] = value;
+            }
+        }
+
+        return sanitized;
     }
 
-    error(message: string, trace?: string, context?: string): void {
-        this.logger.error(message, { context, trace });
+
+    private enrichMetadata(metadata?: LogMetadata): LogMetadata {
+        const enriched: LogMetadata = {
+            ...metadata,
+            environment: this.configService.get<string>('NODE_ENV') || 'development',
+            serviceName: 'aegis-auth-service',
+            hostname: process.env.HOSTNAME || 'unknown',
+            pid: process.pid,
+        };
+
+        return this.sanitizeMetadata(enriched);
     }
 
-    warn(message: string, context?: string): void {
-        this.logger.warn(message, { context });
+    info(message: string, context?: string, metadata?: LogMetadata): void {
+        const enrichedMeta = metadata ? this.enrichMetadata(metadata) : {};
+        this.logger.info(message, { context, ...enrichedMeta });
     }
 
-    debug(message: string, context?: string): void {
-        this.logger.debug(message, { context });
+    error(message: string, trace?: string, context?: string, metadata?: LogMetadata): void {
+        const enrichedMeta = metadata ? this.enrichMetadata(metadata) : {};
+        this.logger.error(message, { context, trace, ...enrichedMeta });
+    }
+
+    warn(message: string, context?: string, metadata?: LogMetadata): void {
+        const enrichedMeta = metadata ? this.enrichMetadata(metadata) : {};
+        this.logger.warn(message, { context, ...enrichedMeta });
+    }
+
+    debug(message: string, context?: string, metadata?: LogMetadata): void {
+        const enrichedMeta = metadata ? this.enrichMetadata(metadata) : {};
+        this.logger.debug(message, { context, ...enrichedMeta });
     }
 }
