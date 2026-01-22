@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ILogger, LogMetadata } from '@application/ports/logger.interface';
 import * as winston from 'winston';
+import * as os from 'os';
+import 'winston-daily-rotate-file';
 
 @Injectable()
 export class WinstonLoggerService implements ILogger {
@@ -21,52 +23,80 @@ export class WinstonLoggerService implements ILogger {
 
     constructor(private readonly configService: ConfigService) {
         const level = this.configService.get<string>('LOG_LEVEL') || 'info';
+        const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+        const isProduction = nodeEnv === 'production';
+
+        const baseFormat = winston.format.combine(
+            winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
+            winston.format.errors({ stack: true }),
+        );
+
+        // Dev format
+        const devConsoleFormat = winston.format.combine(
+            baseFormat,
+            winston.format.colorize({ level: true }),
+            winston.format.printf(({ timestamp, level, message, context, trace, ...meta }) => {
+                const ctx = context || 'App';
+                const traceStr = trace ? `\n${trace}` : '';
+                const cleanMeta = this.sanitizeMetadata(meta);
+                const metaStr = Object.keys(cleanMeta).length > 0
+                    ? `\n${JSON.stringify(cleanMeta, null, 2)}`
+                    : '';
+                return `${timestamp} [${level}] [${ctx}] ${message}${metaStr}${traceStr}`;
+            }),
+        );
+
+        // Production format
+        const prodFormat = winston.format.combine(
+            baseFormat,
+            winston.format.json(),
+        );
+
+        const transports: winston.transport[] = [];
+
+        if (isProduction) {
+            transports.push(
+                new winston.transports.Console({
+                    format: prodFormat,
+                }),
+            );
+
+            // Production: Rotating file for all logs
+            transports.push(
+                new winston.transports.DailyRotateFile({
+                    filename: 'logs/app-%DATE%.log',
+                    datePattern: 'YYYY-MM-DD',
+                    maxSize: '20m',
+                    maxFiles: '14d',
+                    format: prodFormat,
+                }),
+            );
+
+            // Production: Separate error log
+            transports.push(
+                new winston.transports.DailyRotateFile({
+                    filename: 'logs/error-%DATE%.log',
+                    datePattern: 'YYYY-MM-DD',
+                    level: 'error',
+                    maxSize: '20m',
+                    maxFiles: '30d',
+                    format: prodFormat,
+                }),
+            );
+        }
+
+        transports.push(
+            new winston.transports.Console({
+                format: devConsoleFormat,
+            }),
+        );
 
         this.logger = winston.createLogger({
-            level: level,
-            format: winston.format.combine(
-                winston.format.timestamp(),
-                winston.format.errors({ stack: true }),
-            ),
-            transports: [
-                new winston.transports.Console({
-                    format: winston.format.combine(
-                        winston.format.colorize({ level: true }),
-                        winston.format.printf(({ timestamp, level, message, context, trace, ...meta }) => {
-                            const ctx = context || 'AegisAuthService';
-                            const traceStr = trace ? `\n${trace}` : '';
-                            const metaStr = Object.keys(meta).length > 0
-                                ? `\n${JSON.stringify(this.sanitizeMetadata(meta), null, 2)}`
-                                : '';
-                            return `${timestamp} [${level}] [${ctx}] ${message}${metaStr}${traceStr}`;
-                        }),
-                    ),
-                }),
-            ],
+            level,
+            transports,
         });
 
-        // // Add file transports for production
-        // if (process.env.NODE_ENV === 'production') {
-        //     this.logger.add(
-        //         new winston.transports.File({
-        //             filename: 'logs/error.log',
-        //             level: 'error',
-        //             maxsize: 5242880, // 5MB
-        //             maxFiles: 5,
-        //             format: winston.format.json(),
-        //         }),
-        //     );
-        //     this.logger.add(
-        //         new winston.transports.File({
-        //             filename: 'logs/combined.log',
-        //             maxsize: 5242880,
-        //             maxFiles: 5,
-        //             format: winston.format.json(),
-        //         }),
-        //     );
-        // }
     }
-
 
     private sanitizeMetadata(metadata: any): any {
         if (!metadata || typeof metadata !== 'object') {
@@ -80,8 +110,6 @@ export class WinstonLoggerService implements ILogger {
         const sanitized: any = {};
         for (const [key, value] of Object.entries(metadata)) {
             const lowerKey = key.toLowerCase();
-
-            // Check if the key contains sensitive information
             const isSensitive = this.sensitiveFields.some(field =>
                 lowerKey.includes(field.toLowerCase())
             );
@@ -98,13 +126,12 @@ export class WinstonLoggerService implements ILogger {
         return sanitized;
     }
 
-
     private enrichMetadata(metadata?: LogMetadata): LogMetadata {
         const enriched: LogMetadata = {
             ...metadata,
             environment: this.configService.get<string>('NODE_ENV') || 'development',
             serviceName: 'aegis-auth-service',
-            hostname: process.env.HOSTNAME || 'unknown',
+            hostname: process.env.HOSTNAME || os.hostname() || 'unknown',
             pid: process.pid,
         };
 
@@ -130,4 +157,6 @@ export class WinstonLoggerService implements ILogger {
         const enrichedMeta = metadata ? this.enrichMetadata(metadata) : {};
         this.logger.debug(message, { context, ...enrichedMeta });
     }
+
+
 }
