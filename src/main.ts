@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { ILogger } from '@application/ports/logger.interface';
+import { GlobalExceptionFilter } from '@infrastructure/filters/global-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,6 +17,11 @@ async function bootstrap() {
     nodeVersion: process.version,
     pid: process.pid,
   });
+
+  // Test call
+  let filter: GlobalExceptionFilter;
+  filter = new GlobalExceptionFilter();
+  filter.catch(new Error('Test exception'), host as any);
 
   try {
     await app.listen(port);
