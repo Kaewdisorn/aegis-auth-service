@@ -36,7 +36,7 @@ export interface ExtendedLogMetadata extends LogMetadata {
 
 export interface ILogger {
     info(message: string, context: string, metadata?: LogMetadata): void;
-    error(message: string, trace: string, context: string, metadata?: LogMetadata): void;
+    error(message: string, context: string, trace?: string, metadata?: LogMetadata): void;
     warn(message: string, context: string, metadata?: LogMetadata): void;
     debug(message: string, context: string, metadata?: LogMetadata): void;
 }

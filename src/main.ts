@@ -20,32 +20,67 @@ async function bootstrap() {
   try {
     await app.listen(port);
 
-    // logger.info(`Aegis Auth Service started successfully`, 'Bootstrap', {
-    //   url: `http://${host}:${port}`,
-    //   environment: nodeEnv,
-    //   port,
-    //   host,
-    // });
+    logger.info(`Aegis Auth Service started successfully`, 'Bootstrap', {
+      url: `http://${host}:${port}`,
+      environment: nodeEnv,
+      port,
+      host,
+    });
 
-    // logger.info('Service health check passed', 'Bootstrap', {
-    //   status: 'healthy',
-    //   uptime: process.uptime(),
-    // });
+    logger.info('Service health check passed', 'Bootstrap', {
+      status: 'healthy',
+      uptime: process.uptime(),
+    });
   } catch (error) {
-    // logger.error(
-    //   'Failed to start Aegis Auth Service',
-    //   error.stack,
-    //   'Bootstrap',
-    //   {
-    //     error: error.message,
-    //     port,
-    //     host,
-    //   }
-    // );
+    logger.error(
+      'Failed to start Aegis Auth Service',
+      'Bootstrap',
+      error.stack,
+      {
+        error: error.message,
+        port,
+        host,
+      }
+    );
     process.exit(1);
   }
 
+  process.on('SIGTERM', async () => {
+    logger.warn('SIGTERM signal received: closing HTTP server', 'Bootstrap');
+    await app.close();
+    logger.info('HTTP server closed', 'Bootstrap');
+    process.exit(0);
+  });
 
+  process.on('SIGINT', async () => {
+    logger.warn('SIGINT signal received: closing HTTP server', 'Bootstrap');
+    await app.close();
+    logger.info('HTTP server closed', 'Bootstrap');
+    process.exit(0);
+  });
+
+  process.on('unhandledRejection', (reason: any) => {
+    logger.error(
+      'Unhandled Promise Rejection',
+      'Bootstrap',
+      reason?.stack || String(reason),
+      {
+        reason: reason?.message || String(reason),
+      }
+    );
+  });
+
+  process.on('uncaughtException', (error: Error) => {
+    logger.error(
+      'Uncaught Exception',
+      'Bootstrap',
+      error.stack,
+      {
+        error: error.message,
+      }
+    );
+    process.exit(1);
+  });
 
 }
 bootstrap();
