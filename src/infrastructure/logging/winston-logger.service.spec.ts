@@ -15,12 +15,12 @@ jest.mock('winston', () => {
     return {
         createLogger: jest.fn(() => mockLogger),
         format: {
-            combine: jest.fn(),
-            timestamp: jest.fn(),
-            errors: jest.fn(),
-            colorize: jest.fn(),
-            printf: jest.fn(),
-            json: jest.fn(),
+            combine: jest.fn().mockReturnThis(),
+            timestamp: jest.fn().mockReturnThis(),
+            errors: jest.fn().mockReturnThis(),
+            colorize: jest.fn().mockReturnThis(),
+            printf: jest.fn().mockReturnThis(),
+            json: jest.fn().mockReturnThis(),
         },
         transports: {
             Console: jest.fn(),
@@ -29,13 +29,16 @@ jest.mock('winston', () => {
     };
 });
 
+jest.mock('winston-daily-rotate-file', () => {
+    return jest.fn();
+});
+
 describe('WinstonLoggerService', () => {
     let service: WinstonLoggerService;
     let configService: ConfigService;
     let mockWinstonLogger: any;
 
     beforeEach(async () => {
-        // Reset mocks
         jest.clearAllMocks();
 
         const module: TestingModule = await Test.createTestingModule({
@@ -46,6 +49,7 @@ describe('WinstonLoggerService', () => {
                     useValue: {
                         get: jest.fn((key: string) => {
                             if (key === 'LOG_LEVEL') return 'debug';
+                            if (key === 'NODE_ENV') return 'development';
                             return undefined;
                         }),
                     },
@@ -77,7 +81,10 @@ describe('WinstonLoggerService', () => {
                     {
                         provide: ConfigService,
                         useValue: {
-                            get: jest.fn(() => undefined),
+                            get: jest.fn((key: string) => {
+                                if (key === 'NODE_ENV') return 'development';
+                                return undefined;
+                            }),
                         },
                     },
                 ],
@@ -93,8 +100,35 @@ describe('WinstonLoggerService', () => {
             );
         });
 
-        it('should configure Console transport', () => {
+        it('should configure Console transport for development', () => {
             expect(winston.transports.Console).toHaveBeenCalled();
+        });
+
+        it('should use production transports when NODE_ENV is production', async () => {
+            jest.clearAllMocks();
+            const DailyRotateFile = require('winston-daily-rotate-file');
+
+            const module: TestingModule = await Test.createTestingModule({
+                providers: [
+                    WinstonLoggerService,
+                    {
+                        provide: ConfigService,
+                        useValue: {
+                            get: jest.fn((key: string) => {
+                                if (key === 'LOG_LEVEL') return 'info';
+                                if (key === 'NODE_ENV') return 'production';
+                                return undefined;
+                            }),
+                        },
+                    },
+                ],
+            }).compile();
+
+            const prodService = module.get<WinstonLoggerService>(WinstonLoggerService);
+
+            expect(prodService).toBeDefined();
+            expect(winston.transports.Console).toHaveBeenCalled();
+            expect(DailyRotateFile).toHaveBeenCalledTimes(2); // One for app logs, one for error logs
         });
     });
 
@@ -104,7 +138,12 @@ describe('WinstonLoggerService', () => {
 
             service.info(message);
 
-            expect(mockWinstonLogger.info).toHaveBeenCalledWith(message, { context: undefined });
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context: undefined,
+                })
+            );
         });
 
         it('should call winston logger info method with message and context', () => {
@@ -113,87 +152,14 @@ describe('WinstonLoggerService', () => {
 
             service.info(message, context);
 
-            expect(mockWinstonLogger.info).toHaveBeenCalledWith(message, { context });
-        });
-    });
-
-    describe('error', () => {
-        it('should call winston logger error method with message', () => {
-            const message = 'Test error message';
-
-            service.error(message);
-
-            expect(mockWinstonLogger.error).toHaveBeenCalledWith(message, {
-                context: undefined,
-                trace: undefined,
-            });
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context,
+                })
+            );
         });
 
-        it('should call winston logger error method with message and trace', () => {
-            const message = 'Test error message';
-            const trace = 'Error stack trace';
-
-            service.error(message, trace);
-
-            expect(mockWinstonLogger.error).toHaveBeenCalledWith(message, {
-                context: undefined,
-                trace,
-            });
-        });
-
-        it('should call winston logger error method with message, trace and context', () => {
-            const message = 'Test error message';
-            const trace = 'Error stack trace';
-            const context = 'ErrorContext';
-
-            service.error(message, trace, context);
-
-            expect(mockWinstonLogger.error).toHaveBeenCalledWith(message, {
-                context,
-                trace,
-            });
-        });
-    });
-
-    describe('warn', () => {
-        it('should call winston logger warn method with message', () => {
-            const message = 'Test warning message';
-
-            service.warn(message);
-
-            expect(mockWinstonLogger.warn).toHaveBeenCalledWith(message, { context: undefined });
-        });
-
-        it('should call winston logger warn method with message and context', () => {
-            const message = 'Test warning message';
-            const context = 'WarnContext';
-
-            service.warn(message, context);
-
-            expect(mockWinstonLogger.warn).toHaveBeenCalledWith(message, { context });
-        });
-    });
-
-    describe('debug', () => {
-        it('should call winston logger debug method with message', () => {
-            const message = 'Test debug message';
-
-            service.debug(message);
-
-            expect(mockWinstonLogger.debug).toHaveBeenCalledWith(message, { context: undefined });
-        });
-
-        it('should call winston logger debug method with message and context', () => {
-            const message = 'Test debug message';
-            const context = 'DebugContext';
-
-            service.debug(message, context);
-
-            expect(mockWinstonLogger.debug).toHaveBeenCalledWith(message, { context });
-        });
-    });
-
-    describe('Metadata support', () => {
         it('should log info with metadata', () => {
             const message = 'Test message';
             const context = 'TestContext';
@@ -213,6 +179,53 @@ describe('WinstonLoggerService', () => {
                 }),
             );
         });
+    });
+
+    describe('error', () => {
+        it('should call winston logger error method with message', () => {
+            const message = 'Test error message';
+
+            service.error(message);
+
+            expect(mockWinstonLogger.error).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context: undefined,
+                    trace: undefined,
+                })
+            );
+        });
+
+        it('should call winston logger error method with message and trace', () => {
+            const message = 'Test error message';
+            const trace = 'Error stack trace';
+
+            service.error(message, trace);
+
+            expect(mockWinstonLogger.error).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context: undefined,
+                    trace,
+                })
+            );
+        });
+
+        it('should call winston logger error method with message, trace and context', () => {
+            const message = 'Test error message';
+            const trace = 'Error stack trace';
+            const context = 'ErrorContext';
+
+            service.error(message, trace, context);
+
+            expect(mockWinstonLogger.error).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context,
+                    trace,
+                })
+            );
+        });
 
         it('should log error with metadata', () => {
             const message = 'Error occurred';
@@ -229,7 +242,38 @@ describe('WinstonLoggerService', () => {
                     trace,
                     requestId: 'req-123',
                     statusCode: 500,
+                    environment: 'development',
+                    serviceName: 'aegis-auth-service',
                 }),
+            );
+        });
+    });
+
+    describe('warn', () => {
+        it('should call winston logger warn method with message', () => {
+            const message = 'Test warning message';
+
+            service.warn(message);
+
+            expect(mockWinstonLogger.warn).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context: undefined,
+                })
+            );
+        });
+
+        it('should call winston logger warn method with message and context', () => {
+            const message = 'Test warning message';
+            const context = 'WarnContext';
+
+            service.warn(message, context);
+
+            expect(mockWinstonLogger.warn).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context,
+                })
             );
         });
 
@@ -245,7 +289,38 @@ describe('WinstonLoggerService', () => {
                 expect.objectContaining({
                     context,
                     correlationId: 'corr-456',
+                    environment: 'development',
+                    serviceName: 'aegis-auth-service',
                 }),
+            );
+        });
+    });
+
+    describe('debug', () => {
+        it('should call winston logger debug method with message', () => {
+            const message = 'Test debug message';
+
+            service.debug(message);
+
+            expect(mockWinstonLogger.debug).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context: undefined,
+                })
+            );
+        });
+
+        it('should call winston logger debug method with message and context', () => {
+            const message = 'Test debug message';
+            const context = 'DebugContext';
+
+            service.debug(message, context);
+
+            expect(mockWinstonLogger.debug).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    context,
+                })
             );
         });
 
@@ -359,6 +434,36 @@ describe('WinstonLoggerService', () => {
                 }),
             );
         });
+
+        it('should redact cookie from metadata', () => {
+            const message = 'Request with cookie';
+            const metadata = { cookie: 'session=abc123', userId: '456' };
+
+            service.info(message, 'HTTPContext', metadata);
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    cookie: '***REDACTED***',
+                    userId: '456',
+                }),
+            );
+        });
+
+        it('should redact secret from metadata', () => {
+            const message = 'Config loaded';
+            const metadata = { secret: 'my-secret-key', appName: 'aegis' };
+
+            service.info(message, 'ConfigContext', metadata);
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    secret: '***REDACTED***',
+                    appName: 'aegis',
+                }),
+            );
+        });
     });
 
     describe('Metadata enrichment', () => {
@@ -375,6 +480,32 @@ describe('WinstonLoggerService', () => {
                     environment: 'development',
                     serviceName: 'aegis-auth-service',
                     pid: expect.any(Number),
+                }),
+            );
+        });
+
+        it('should include serviceName in enriched metadata', () => {
+            const message = 'Service started';
+
+            service.info(message, 'Bootstrap', { port: 3000 });
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    serviceName: 'aegis-auth-service',
+                }),
+            );
+        });
+
+        it('should include process PID in enriched metadata', () => {
+            const message = 'Process info';
+
+            service.info(message, 'System', {});
+
+            expect(mockWinstonLogger.info).toHaveBeenCalledWith(
+                message,
+                expect.objectContaining({
+                    pid: process.pid,
                 }),
             );
         });

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ILogger, LogMetadata } from '@application/ports/logger.interface';
 import * as winston from 'winston';
 import * as os from 'os';
-import 'winston-daily-rotate-file';
+import DailyRotateFile from 'winston-daily-rotate-file';
 
 @Injectable()
 export class WinstonLoggerService implements ILogger {
@@ -61,10 +61,9 @@ export class WinstonLoggerService implements ILogger {
                 }),
             );
 
-            // Production: Rotating file for all logs
             transports.push(
-                new winston.transports.DailyRotateFile({
-                    filename: 'logs/app-%DATE%.log',
+                new DailyRotateFile({
+                    filename: 'logs/app-%DATE%.json',
                     datePattern: 'YYYY-MM-DD',
                     maxSize: '20m',
                     maxFiles: '14d',
@@ -72,10 +71,9 @@ export class WinstonLoggerService implements ILogger {
                 }),
             );
 
-            // Production: Separate error log
             transports.push(
-                new winston.transports.DailyRotateFile({
-                    filename: 'logs/error-%DATE%.log',
+                new DailyRotateFile({
+                    filename: 'logs/error-%DATE%.json',
                     datePattern: 'YYYY-MM-DD',
                     level: 'error',
                     maxSize: '20m',
