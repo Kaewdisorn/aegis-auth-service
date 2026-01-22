@@ -4,7 +4,11 @@ import { Controller, Post } from '@nestjs/common';
 export class AuthController {
 
     @Post('/')
+    // throwError() {
+    //     throw new Error('test error from AuthController');
+    // }
     async register() {
-        return { message: 'User registered successfully' };
+        throw new Error('test error from AuthController');
+        // return { message: 'User registered successfully' };
     }
 }

@@ -19,9 +19,7 @@ async function bootstrap() {
   });
 
   // Test call
-  let filter: GlobalExceptionFilter;
-  filter = new GlobalExceptionFilter();
-  filter.catch(new Error('Test exception'), host as any);
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   try {
     await app.listen(port);
