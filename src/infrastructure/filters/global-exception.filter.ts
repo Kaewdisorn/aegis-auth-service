@@ -20,28 +20,34 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const request = ctx.getRequest<Request>();
 
         const correlationId = (request as any).correlationId || uuidv4();
+        const timestamp = new Date().toISOString();
 
         const status =
             exception instanceof HttpException
                 ? exception.getStatus()
                 : HttpStatus.INTERNAL_SERVER_ERROR;
 
+        const exceptionResponse =
+            exception instanceof HttpException ? exception.getResponse() : null;
+
         const message =
-            exception instanceof HttpException
-                ? exception.message
-                : 'Internal server error';
+            typeof exceptionResponse === 'object' && exceptionResponse !== null
+                ? (exceptionResponse as any).message || exception.message
+                : exception instanceof HttpException
+                    ? exception.message
+                    : 'Internal server error';
 
         this.logger.error(
             `Unhandled exception: ${exception.message}`,
             'GlobalExceptionFilter',
-            exception.stack || '',
+            undefined,
             {
                 correlationId,
-                // error: {
-                //     name: exception.name,
-                //     message: exception.message,
-                //     stack: exception.stack,
-                // },
+                error: {
+                    name: exception.name,
+                    message: exception.message,
+                    stack: exception.stack,
+                },
                 request: {
                     method: request.method,
                     url: request.url,
@@ -58,7 +64,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
                         username: (request as any).user.username,
                     }
                     : undefined,
-                timestamp: new Date().toISOString(),
+                timestamp,
             },
         );
 
@@ -66,19 +72,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             statusCode: status,
             message:
                 process.env.NODE_ENV === 'production'
-                    ? message
-                    : exception.message || message,
+                    ? this.sanitizeMessage(message, status)
+                    : message,
             error: exception.name || 'Error',
             correlationId,
-            timestamp: new Date().toISOString(),
+            timestamp,
             path: request.url,
-            // ...(process.env.NODE_ENV !== 'production' && {
-            //     //stack: exception.stack,
-            //     stack: this.parseStack(exception.stack),
-            // }),
         };
 
         response.status(status).json(errorResponse);
+    }
+
+    private sanitizeMessage(message: string | string[], status: number): string | string[] {
+        if (status >= 500) {
+            return 'Internal server error';
+        }
+        return message;
     }
 
     private sanitizeHeaders(headers: any): any {
