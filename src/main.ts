@@ -5,7 +5,9 @@ import { ILogger } from '@application/ports/logger.interface';
 import { GlobalExceptionFilter } from '@infrastructure/filters/global-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: false,
+  });
   const logger = app.get<ILogger>(ILogger);
   const configService = app.get(ConfigService);
   const host = configService.get<string>('HOST') || 'localhost';

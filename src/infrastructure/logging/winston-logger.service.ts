@@ -81,13 +81,13 @@ export class WinstonLoggerService implements ILogger {
                     format: prodFormat,
                 }),
             );
+        } else {
+            transports.push(
+                new winston.transports.Console({
+                    format: devConsoleFormat,
+                }),
+            );
         }
-
-        transports.push(
-            new winston.transports.Console({
-                format: devConsoleFormat,
-            }),
-        );
 
         this.logger = winston.createLogger({
             level,

@@ -37,11 +37,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             exception.stack || '',
             {
                 correlationId,
-                error: {
-                    name: exception.name,
-                    message: exception.message,
-                    stack: exception.stack,
-                },
+                // error: {
+                //     name: exception.name,
+                //     message: exception.message,
+                //     stack: exception.stack,
+                // },
                 request: {
                     method: request.method,
                     url: request.url,
@@ -97,24 +97,5 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         });
 
         return sanitized;
-    }
-
-    private parseStack(stack?: string) {
-        if (!stack) return undefined;
-
-        return stack
-            .split('\n')
-            .slice(1)
-            .map(line => {
-                const match = line.match(/\s*at\s+(.*?)\s+\((.*):(\d+):(\d+)\)/);
-                if (!match) return { raw: line.trim() };
-
-                return {
-                    method: match[1],
-                    file: match[2].split(/[\\/]/).pop(),
-                    line: Number(match[3]),
-                    column: Number(match[4]),
-                };
-            });
     }
 }
