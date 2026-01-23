@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { ILogger } from '@application/ports/logger.interface';
 import { GlobalExceptionFilter } from '@infrastructure/filters/global-exception.filter';
+import { HttpExceptionFilter } from '@infrastructure/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -20,7 +21,10 @@ async function bootstrap() {
     pid: process.pid,
   });
 
-  app.useGlobalFilters(new GlobalExceptionFilter(logger));
+  app.useGlobalFilters(
+    new HttpExceptionFilter(logger),
+    new GlobalExceptionFilter(logger),
+  );
 
   try {
     await app.listen(port);
