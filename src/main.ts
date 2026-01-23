@@ -18,8 +18,7 @@ async function bootstrap() {
     pid: process.pid,
   });
 
-  // Test call
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalFilters(new GlobalExceptionFilter(logger));
 
   try {
     await app.listen(port);
