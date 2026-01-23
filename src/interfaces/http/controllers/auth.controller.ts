@@ -8,7 +8,7 @@ export class AuthController {
     //     throw new Error('test error from AuthController');
     // }
     async register() {
-        throw new Error('test error from AuthController');
+        throw new Error('testtt error from AuthController');
         // return { message: 'User registered successfully' };
     }
 }

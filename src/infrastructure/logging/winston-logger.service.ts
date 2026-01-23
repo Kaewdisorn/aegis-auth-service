@@ -141,7 +141,7 @@ export class WinstonLoggerService implements ILogger {
         this.logger.info(message, { context, ...enrichedMeta });
     }
 
-    error(message: string, trace?: string, context?: string, metadata?: LogMetadata): void {
+    error(message: string, context?: string, trace?: string, metadata?: LogMetadata): void {
         const enrichedMeta = metadata ? this.enrichMetadata(metadata) : {};
         this.logger.error(message, { context, trace, ...enrichedMeta });
     }
