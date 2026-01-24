@@ -22,8 +22,8 @@ async function bootstrap() {
   });
 
   app.useGlobalFilters(
-    new HttpExceptionFilter(logger),
-    new GlobalExceptionFilter(logger),
+    new GlobalExceptionFilter(logger),  // Lower priority - catches non-HTTP exceptions
+    new HttpExceptionFilter(logger),    // Higher priority - catches HttpException first
   );
 
   try {

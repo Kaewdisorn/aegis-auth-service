@@ -3,7 +3,6 @@ import {
     ExceptionFilter,
     Catch,
     ArgumentsHost,
-    HttpException,
     HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
@@ -18,29 +17,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
         const request = ctx.getRequest<Request>();
-
         const correlationId = (request as any).correlationId || uuidv4();
         const timestamp = new Date().toISOString();
 
-        const status =
-            exception instanceof HttpException
-                ? exception.getStatus()
-                : HttpStatus.INTERNAL_SERVER_ERROR;
-
-        const exceptionResponse =
-            exception instanceof HttpException ? exception.getResponse() : null;
-
-        const message =
-            typeof exceptionResponse === 'object' && exceptionResponse !== null
-                ? (exceptionResponse as any).message || exception.message
-                : exception instanceof HttpException
-                    ? exception.message
-                    : 'Internal server error';
+        // Always 500 - HttpExceptions are handled by HttpExceptionFilter
+        const status = HttpStatus.INTERNAL_SERVER_ERROR;
 
         this.logger.error(
             `Unhandled exception: ${exception.message}`,
             'GlobalExceptionFilter',
-            undefined,
+            exception.stack,
             {
                 correlationId,
                 error: {
@@ -72,8 +58,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             statusCode: status,
             message:
                 process.env.NODE_ENV === 'production'
-                    ? this.sanitizeMessage(message, status)
-                    : message,
+                    ? 'Internal server error'
+                    : exception.message,
             error: exception.name || 'Error',
             correlationId,
             timestamp,
@@ -81,13 +67,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         };
 
         response.status(status).json(errorResponse);
-    }
-
-    private sanitizeMessage(message: string | string[], status: number): string | string[] {
-        if (status >= 500) {
-            return 'Internal server error';
-        }
-        return message;
     }
 
     private sanitizeHeaders(headers: any): any {
