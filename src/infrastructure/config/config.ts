@@ -1,15 +1,12 @@
+import { IAppConfig } from '@application/ports/config.interface';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-export interface AppConfig {
-    nodeEnv: string;
-    host: string;
-    port: number;
-}
+
 
 @Injectable()
 export class ServerConfig {
-    public readonly serverConfig: AppConfig;
+    public readonly serverConfig: IAppConfig;
 
     constructor(private readonly configService: ConfigService) {
         this.serverConfig = {
