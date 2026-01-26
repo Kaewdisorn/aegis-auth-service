@@ -3,17 +3,18 @@ import { AppModule } from './app.module';
 import { ILogger } from '@application/ports/logger.interface';
 import { GlobalExceptionFilter } from '@infrastructure/filters/global-exception.filter';
 import { HttpExceptionFilter } from '@infrastructure/filters/http-exception.filter';
-import { ServerConfig } from '@infrastructure/config/config';
+import { IAppConfig } from '@application/ports/config.interface';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: false,
   });
+
+  const config = app.get<IAppConfig>(IAppConfig);
   const logger = app.get<ILogger>(ILogger);
-  const serverConfig = app.get<ServerConfig>(ServerConfig);
 
   logger.info('Starting Aegis Auth Service...', 'Bootstrap', {
-    environment: serverConfig.serverConfig.nodeEnv,
+    environment: config.appConfig.nodeEnv,
     nodeVersion: process.version,
     pid: process.pid,
   });
@@ -24,13 +25,13 @@ async function bootstrap() {
   );
 
   try {
-    await app.listen(serverConfig.serverConfig.port);
+    await app.listen(config.appConfig.port);
 
     logger.info(`Aegis Auth Service started successfully`, 'Bootstrap', {
-      url: `http://${serverConfig.serverConfig.host}:${serverConfig.serverConfig.port}`,
-      environment: serverConfig.serverConfig.nodeEnv,
-      port: serverConfig.serverConfig.port,
-      host: serverConfig.serverConfig.host,
+      url: `http://${config.appConfig.host}:${config.appConfig.port}`,
+      environment: config.appConfig.nodeEnv,
+      port: config.appConfig.port,
+      host: config.appConfig.host,
     });
 
     logger.info('Service health check passed', 'Bootstrap', {
@@ -44,8 +45,8 @@ async function bootstrap() {
       error.stack,
       {
         error: error.message,
-        port: serverConfig.serverConfig.port,
-        host: serverConfig.serverConfig.host,
+        port: config.appConfig.port,
+        host: config.appConfig.host,
       }
     );
     process.exit(1);
