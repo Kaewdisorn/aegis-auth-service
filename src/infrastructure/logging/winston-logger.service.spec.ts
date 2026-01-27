@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
 import { WinstonLoggerService } from './winston-logger.service';
+import { IAppConfig } from '@application/ports/config.interface';
 import * as winston from 'winston';
 
 jest.mock('winston', () => {
@@ -35,7 +35,6 @@ jest.mock('winston-daily-rotate-file', () => {
 
 describe('WinstonLoggerService', () => {
     let service: WinstonLoggerService;
-    let configService: ConfigService;
     let mockWinstonLogger: any;
 
     beforeEach(async () => {
@@ -45,20 +44,24 @@ describe('WinstonLoggerService', () => {
             providers: [
                 WinstonLoggerService,
                 {
-                    provide: ConfigService,
+                    provide: IAppConfig,
                     useValue: {
-                        get: jest.fn((key: string) => {
-                            if (key === 'LOG_LEVEL') return 'debug';
-                            if (key === 'NODE_ENV') return 'development';
-                            return undefined;
-                        }),
+                        appConfig: {
+                            nodeEnv: 'development',
+                            host: 'localhost',
+                            port: 3000,
+                        },
+                        logger: {
+                            level: 'debug',
+                            enableFileLogging: false,
+                            logDir: './logs',
+                        },
                     },
                 },
             ],
         }).compile();
 
         service = module.get<WinstonLoggerService>(WinstonLoggerService);
-        configService = module.get<ConfigService>(ConfigService);
         mockWinstonLogger = (winston.createLogger as jest.Mock).mock.results[0].value;
     });
 
@@ -69,7 +72,6 @@ describe('WinstonLoggerService', () => {
     describe('constructor', () => {
         it('should create winston logger with configured log level', () => {
             expect(winston.createLogger).toHaveBeenCalled();
-            expect(configService.get).toHaveBeenCalledWith('LOG_LEVEL');
         });
 
         it('should use "info" as default log level when LOG_LEVEL is not set', async () => {
@@ -79,12 +81,18 @@ describe('WinstonLoggerService', () => {
                 providers: [
                     WinstonLoggerService,
                     {
-                        provide: ConfigService,
+                        provide: IAppConfig,
                         useValue: {
-                            get: jest.fn((key: string) => {
-                                if (key === 'NODE_ENV') return 'development';
-                                return undefined;
-                            }),
+                            appConfig: {
+                                nodeEnv: 'development',
+                                host: 'localhost',
+                                port: 3000,
+                            },
+                            logger: {
+                                level: 'info',
+                                enableFileLogging: false,
+                                logDir: './logs',
+                            },
                         },
                     },
                 ],
@@ -112,13 +120,18 @@ describe('WinstonLoggerService', () => {
                 providers: [
                     WinstonLoggerService,
                     {
-                        provide: ConfigService,
+                        provide: IAppConfig,
                         useValue: {
-                            get: jest.fn((key: string) => {
-                                if (key === 'LOG_LEVEL') return 'info';
-                                if (key === 'NODE_ENV') return 'production';
-                                return undefined;
-                            }),
+                            appConfig: {
+                                nodeEnv: 'production',
+                                host: 'localhost',
+                                port: 3000,
+                            },
+                            logger: {
+                                level: 'info',
+                                enableFileLogging: true,
+                                logDir: './logs',
+                            },
                         },
                     },
                 ],
