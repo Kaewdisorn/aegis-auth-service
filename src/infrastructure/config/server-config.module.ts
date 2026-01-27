@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppConfigService } from './config';
 import { IAppConfig } from '@application/ports/config.interface';
 

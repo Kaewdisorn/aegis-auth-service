@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable } from '@nestjs/common';
 import { ILogger, LogMetadata } from '@application/ports/logger.interface';
 import * as winston from 'winston';
 import * as os from 'os';
 import DailyRotateFile from 'winston-daily-rotate-file';
+import { IAppConfig } from '@application/ports/config.interface';
 
 @Injectable()
 export class WinstonLoggerService implements ILogger {
@@ -21,9 +21,9 @@ export class WinstonLoggerService implements ILogger {
         'ssn',
     ];
 
-    constructor(private readonly configService: ConfigService) {
-        const level = this.configService.get<string>('LOG_LEVEL') || 'info';
-        const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development';
+    constructor(@Inject(IAppConfig) private readonly config: IAppConfig) {
+        const level = this.config.logger.level || 'info';
+        const nodeEnv = this.config.appConfig.nodeEnv || 'development';
         const isProduction = nodeEnv === 'production';
 
         const baseFormat = winston.format.combine(
@@ -63,7 +63,7 @@ export class WinstonLoggerService implements ILogger {
 
             transports.push(
                 new DailyRotateFile({
-                    filename: 'logs/app-%DATE%.json',
+                    filename: `${this.config.logger.logDir}/app-%DATE%.json`,
                     datePattern: 'YYYY-MM-DD',
                     maxSize: '20m',
                     maxFiles: '14d',
@@ -73,7 +73,7 @@ export class WinstonLoggerService implements ILogger {
 
             transports.push(
                 new DailyRotateFile({
-                    filename: 'logs/error-%DATE%.json',
+                    filename: `${this.config.logger.logDir}/error-%DATE%.json`,
                     datePattern: 'YYYY-MM-DD',
                     level: 'error',
                     maxSize: '20m',
@@ -127,7 +127,7 @@ export class WinstonLoggerService implements ILogger {
     private enrichMetadata(metadata?: LogMetadata): LogMetadata {
         const enriched: LogMetadata = {
             ...metadata,
-            environment: this.configService.get<string>('NODE_ENV') || 'development',
+            environment: this.config.appConfig.nodeEnv || 'development',
             serviceName: 'aegis-auth-service',
             hostname: process.env.HOSTNAME || os.hostname() || 'unknown',
             pid: process.pid,
