@@ -12,7 +12,9 @@ Aegis is a reusable authentication microservice designed to serve as the single 
 - **RS256 Asymmetric Signing** – Secure JWT signing with public/private key pairs
 - **Refresh Token Rotation** – Automatic token refresh with revocation support
 - **Clean Architecture** – Domain-driven design with clear separation of concerns
-- **Production-Ready Design** – Type-safe, scalable, and optimized for real-world use
+- **Production-Ready Logging** – Winston with daily rotation, PII sanitization, structured metadata
+- **Centralized Error Handling** – Global exception filters with correlation ID tracking
+- **Type-Safe Configuration** – IAppConfig interface for centralized environment config
 - **Docker Support** – Containerized deployment with PostgreSQL
 - **JWKS Endpoint** – Public key distribution via `/.well-known/jwks.json`
 
@@ -22,27 +24,29 @@ Aegis is a reusable authentication microservice designed to serve as the single 
 
 ```
 src/
+├── application/            # Business logic layer
+│   ├── use-cases/          # RegisterUser, Login, RefreshToken, etc.
+│   ├── ports/              # ILogger, IAppConfig, IPasswordHasher, IJwtService
+│   └── dtos/               # Input/output data transfer objects
+│
 ├── domain/                 # Pure TypeScript - no framework dependencies
 │   ├── entities/           # User, RefreshToken (plain classes)
 │   ├── repositories/       # Repository interfaces
 │   ├── value-objects/      # Email, Password VOs
 │   └── exceptions/         # Domain-specific exceptions
 │
-├── application/            # Business logic and use cases
-│   ├── use-cases/          # RegisterUser, Login, RefreshToken, etc.
-│   ├── ports/              # ILogger, IPasswordHasher, IJwtService
-│   └── dtos/               # Input/output data transfer objects
-│
 ├── infrastructure/         # Framework and external implementations
+│   ├── config/             # AppConfigService, environment configuration
+│   ├── filters/            # GlobalExceptionFilter, HttpExceptionFilter
+│   ├── logging/            # WinstonLoggerService implementation
+│   ├── middleware/         # CorrelationId, HttpLogger (planned)
 │   ├── persistence/        # TypeORM entities and repositories
-│   ├── security/           # JWT, password hashing, key management
-│   ├── logging/            # Winston logger implementation
-│   └── config/             # Environment configuration
+│   └── security/           # JWT, password hashing, key management
 │
 ├── interfaces/             # HTTP layer
-│   ├── http/controllers/   # REST API controllers
-│   ├── http/presenters/    # Response formatting
-│   └── guards/             # JWT authentication guards
+│   └── http/
+│       ├── controllers/    # REST API controllers
+│       └── presenters/     # Response formatting
 │
 └── main.ts                 # Application entry point
 ```
@@ -50,35 +54,48 @@ src/
 ### Clean Architecture Principles
 
 - **Domain layer** has **zero dependencies** on NestJS, TypeORM, or any framework
-- **Use cases** orchestrate business logic without knowing HTTP or database details
-- **Infrastructure** implements domain interfaces (Dependency Inversion)
+- **Application ports** define interfaces (ILogger, IAppConfig) - no implementation details
+- **Infrastructure** implements domain/application interfaces (Dependency Inversion)
 - **Interfaces** handle HTTP concerns and presentation logic
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Core Framework
-- **NestJS** – Modular, enterprise-grade Node.js framework
-- **TypeScript (Strict Mode)** – Type safety and developer experience
+| Category | Technology |
+|----------|------------|
+| **Framework** | NestJS |
+| **Language** | TypeScript (Strict Mode) |
+| **Database** | PostgreSQL |
+| **ORM** | TypeORM |
+| **Authentication** | JWT (RS256), bcrypt, Passport.js |
+| **Logging** | Winston, winston-daily-rotate-file |
+| **Testing** | Jest |
+| **Containerization** | Docker, docker-compose |
+| **Code Quality** | ESLint, Prettier |
 
-### Database & ORM
-- **PostgreSQL** – Production-grade relational database
-- **TypeORM** – TypeScript ORM with migration support
+---
 
-### Authentication & Security
-- **JWT (RS256)** – Asymmetric key signing for distributed systems
-- **bcrypt** – Password hashing with salt
-- **Passport.js** – Authentication middleware
+## ⚙️ Environment Variables
 
-### Logging & Monitoring
-- **Winston** – Production-grade logging with file rotation
-- **Custom Logger Interface** – Framework-agnostic logging abstraction
+```bash
+# Application
+PORT=3000
+HOST=localhost
+NODE_ENV=development    # development | production
 
-### Development Tools
-- **Docker & docker-compose** – Containerized development environment
-- **ESLint & Prettier** – Code quality and formatting
-- **Jest** – Unit and integration testing
+# Logging
+LOG_LEVEL=info          # debug | info | warn | error
+LOG_DIR=./logs
+ENABLE_FILE_LOGGING=false
+
+# Database
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=aegis_auth
+POSTGRES_USER=aegis
+POSTGRES_PASSWORD=aegis_password
+```
 
 ---
 

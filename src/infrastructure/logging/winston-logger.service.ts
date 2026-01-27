@@ -25,6 +25,7 @@ export class WinstonLoggerService implements ILogger {
         const level = this.config.logger.level || 'info';
         const nodeEnv = this.config.appConfig.nodeEnv || 'development';
         const isProduction = nodeEnv === 'production';
+        const enableFileLogging = this.config.logger.enableFileLogging;
 
         const baseFormat = winston.format.combine(
             winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
@@ -54,13 +55,15 @@ export class WinstonLoggerService implements ILogger {
 
         const transports: winston.transport[] = [];
 
-        if (isProduction) {
-            transports.push(
-                new winston.transports.Console({
-                    format: prodFormat,
-                }),
-            );
+        // Console transport (always enabled)
+        transports.push(
+            new winston.transports.Console({
+                format: isProduction ? prodFormat : devConsoleFormat,
+            }),
+        );
 
+        // File transports (only if enabled)
+        if (enableFileLogging) {
             transports.push(
                 new DailyRotateFile({
                     filename: `${this.config.logger.logDir}/app-%DATE%.json`,
@@ -79,12 +82,6 @@ export class WinstonLoggerService implements ILogger {
                     maxSize: '20m',
                     maxFiles: '30d',
                     format: prodFormat,
-                }),
-            );
-        } else {
-            transports.push(
-                new winston.transports.Console({
-                    format: devConsoleFormat,
                 }),
             );
         }
