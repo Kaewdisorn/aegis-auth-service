@@ -209,27 +209,27 @@ describe('WinstonLoggerService', () => {
             );
         });
 
-        it('should call winston logger error method with message and trace', () => {
+        it('should call winston logger error method with message and context', () => {
             const message = 'Test error message';
-            const trace = 'Error stack trace';
+            const context = 'ErrorContext';
 
-            service.error(message, trace);
+            service.error(message, context);
 
             expect(mockWinstonLogger.error).toHaveBeenCalledWith(
                 message,
                 expect.objectContaining({
-                    context: undefined,
-                    trace,
+                    context,
+                    trace: undefined,
                 })
             );
         });
 
-        it('should call winston logger error method with message, trace and context', () => {
+        it('should call winston logger error method with message, context and trace', () => {
             const message = 'Test error message';
-            const trace = 'Error stack trace';
             const context = 'ErrorContext';
+            const trace = 'Error stack trace';
 
-            service.error(message, trace, context);
+            service.error(message, context, trace);
 
             expect(mockWinstonLogger.error).toHaveBeenCalledWith(
                 message,
@@ -242,11 +242,11 @@ describe('WinstonLoggerService', () => {
 
         it('should log error with metadata', () => {
             const message = 'Error occurred';
-            const trace = 'Stack trace';
             const context = 'ErrorContext';
+            const trace = 'Stack trace';
             const metadata = { requestId: 'req-123', statusCode: 500 };
 
-            service.error(message, trace, context, metadata);
+            service.error(message, context, trace, metadata);
 
             expect(mockWinstonLogger.error).toHaveBeenCalledWith(
                 message,

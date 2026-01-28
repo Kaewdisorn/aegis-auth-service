@@ -1,11 +1,6 @@
 import { ILogger } from "../../application/ports/logger.interface";
 import { ArgumentsHost, HttpException, HttpStatus } from "@nestjs/common";
 import { Request, Response } from "express";
-
-jest.mock('uuid', () => ({
-    v4: jest.fn(() => 'mock-uuid-value'),
-}));
-
 import { GlobalExceptionFilter } from "./global-exception.filter";
 
 describe('GlobalExceptionFilter', () => {
@@ -34,7 +29,8 @@ describe('GlobalExceptionFilter', () => {
             query: { foo: 'bar' },
             params: { id: '123' },
             ip: '127.0.0.1',
-        };
+            correlationId: 'test-correlation-id',
+        } as Partial<Request> & { correlationId: string };
 
         mockResponse = {
             status: jest.fn().mockReturnThis(),
@@ -57,23 +53,25 @@ describe('GlobalExceptionFilter', () => {
     });
 
     describe('catch', () => {
-        it('should handle HttpException and return correct status code', () => {
-            const exception = new HttpException('Not Found', HttpStatus.NOT_FOUND);
+        it('should handle any exception and return 500 status code', () => {
+            // GlobalExceptionFilter catches ALL unhandled exceptions and returns 500
+            // HttpExceptions are handled by HttpExceptionFilter
+            const exception = new Error('Something unexpected');
 
             filter.catch(exception, mockArgumentsHost);
 
-            expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+            expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    statusCode: HttpStatus.NOT_FOUND,
-                    message: 'Not Found',
-                    error: 'HttpException',
+                    statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+                    error: 'Error',
                     path: '/test-url',
+                    correlationId: 'test-correlation-id',
                 })
             );
         });
 
-        it('should handle generic Error and return 500 status', () => {
+        it('should handle generic Error and return 500 status with correlationId', () => {
             const exception = new Error('Something went wrong');
 
             filter.catch(exception, mockArgumentsHost);
@@ -82,26 +80,27 @@ describe('GlobalExceptionFilter', () => {
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-                    message: 'Internal server error',
                     error: 'Error',
                     path: '/test-url',
+                    correlationId: 'test-correlation-id',
                 })
             );
         });
 
         it('should log the exception with correct metadata', () => {
-            const exception = new HttpException('Bad Request', HttpStatus.BAD_REQUEST);
+            const exception = new Error('Something went wrong');
 
             filter.catch(exception, mockArgumentsHost);
 
             expect(mockLogger.error).toHaveBeenCalledWith(
                 expect.stringContaining('Unhandled exception'),
                 'GlobalExceptionFilter',
-                undefined,
+                expect.any(String), // stack trace
                 expect.objectContaining({
+                    correlationId: 'test-correlation-id',
                     error: expect.objectContaining({
-                        name: 'HttpException',
-                        message: 'Bad Request',
+                        name: 'Error',
+                        message: 'Something went wrong',
                     }),
                     request: expect.objectContaining({
                         method: 'GET',
@@ -129,14 +128,14 @@ describe('GlobalExceptionFilter', () => {
             );
         });
 
-        it('should generate new correlationId if not present in request', () => {
-            const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
+        it('should use correlationId from request (set by middleware)', () => {
+            const exception = new Error('Test error');
 
             filter.catch(exception, mockArgumentsHost);
 
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    correlationId: expect.any(String),
+                    correlationId: 'test-correlation-id',
                 })
             );
         });
@@ -144,14 +143,14 @@ describe('GlobalExceptionFilter', () => {
         it('should include user info in log metadata when user is present', () => {
             (mockRequest as any).user = { id: 'user-123', username: 'testuser' };
 
-            const exception = new HttpException('Forbidden', HttpStatus.FORBIDDEN);
+            const exception = new Error('Database error');
 
             filter.catch(exception, mockArgumentsHost);
 
             expect(mockLogger.error).toHaveBeenCalledWith(
                 expect.any(String),
                 'GlobalExceptionFilter',
-                undefined,
+                expect.any(String), // stack trace
                 expect.objectContaining({
                     user: {
                         id: 'user-123',
@@ -162,14 +161,14 @@ describe('GlobalExceptionFilter', () => {
         });
 
         it('should not include user info in log metadata when user is not present', () => {
-            const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
+            const exception = new Error('Test error');
 
             filter.catch(exception, mockArgumentsHost);
 
             expect(mockLogger.error).toHaveBeenCalledWith(
                 expect.any(String),
                 'GlobalExceptionFilter',
-                undefined,
+                expect.any(String), // stack trace
                 expect.objectContaining({
                     user: undefined,
                 })
@@ -191,17 +190,21 @@ describe('GlobalExceptionFilter', () => {
             );
         });
 
-        it('should handle HttpException with array message', () => {
-            const exception = new HttpException(
-                { message: ['error1', 'error2'] },
-                HttpStatus.BAD_REQUEST
-            );
+        it('should handle exception with proper error name', () => {
+            class CustomError extends Error {
+                constructor(message: string) {
+                    super(message);
+                    this.name = 'CustomError';
+                }
+            }
+            const exception = new CustomError('Custom error occurred');
 
             filter.catch(exception, mockArgumentsHost);
 
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    message: ['error1', 'error2'],
+                    error: 'CustomError',
+                    correlationId: 'test-correlation-id',
                 })
             );
         });
@@ -222,7 +225,7 @@ describe('GlobalExceptionFilter', () => {
             expect(mockLogger.error).toHaveBeenCalledWith(
                 expect.any(String),
                 'GlobalExceptionFilter',
-                undefined,
+                expect.any(String), // stack trace
                 expect.objectContaining({
                     request: expect.objectContaining({
                         headers: {
@@ -238,13 +241,14 @@ describe('GlobalExceptionFilter', () => {
         });
 
         it('should include timestamp in response', () => {
-            const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
+            const exception = new Error('Test error');
 
             filter.catch(exception, mockArgumentsHost);
 
             expect(mockResponse.json).toHaveBeenCalledWith(
                 expect.objectContaining({
                     timestamp: expect.any(String),
+                    correlationId: 'test-correlation-id',
                 })
             );
         });
@@ -272,14 +276,18 @@ describe('GlobalExceptionFilter', () => {
                 );
             });
 
-            it('should not sanitize message for 4xx errors', () => {
-                const exception = new HttpException('Not Found', HttpStatus.NOT_FOUND);
+            it('should always return 500 for unhandled exceptions', () => {
+                // GlobalExceptionFilter only handles unhandled exceptions
+                // HttpExceptions should be caught by HttpExceptionFilter
+                const exception = new Error('Unexpected error');
 
                 filter.catch(exception, mockArgumentsHost);
 
+                expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
                 expect(mockResponse.json).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        message: 'Not Found',
+                        message: 'Internal server error',
+                        statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
                     })
                 );
             });
@@ -296,26 +304,26 @@ describe('GlobalExceptionFilter', () => {
                 process.env.NODE_ENV = originalNodeEnv;
             });
 
-            it('should show original message for 4xx HttpException errors', () => {
-                const exception = new HttpException('Bad Request - invalid input', HttpStatus.BAD_REQUEST);
+            it('should show original message for generic errors in development', () => {
+                const exception = new Error('Database connection failed');
 
                 filter.catch(exception, mockArgumentsHost);
 
                 expect(mockResponse.json).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        message: 'Bad Request - invalid input',
+                        message: 'Database connection failed',
                     })
                 );
             });
 
-            it('should show original message for 5xx HttpException errors', () => {
-                const exception = new HttpException('Service Unavailable', HttpStatus.SERVICE_UNAVAILABLE);
+            it('should show original message for any error in development', () => {
+                const exception = new Error('Service unavailable - downstream failure');
 
                 filter.catch(exception, mockArgumentsHost);
 
                 expect(mockResponse.json).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        message: 'Service Unavailable',
+                        message: 'Service unavailable - downstream failure',
                     })
                 );
             });

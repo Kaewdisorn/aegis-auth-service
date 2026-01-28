@@ -38,7 +38,8 @@ describe('HttpExceptionFilter', () => {
             query: {},
             params: {},
             ip: '192.168.1.1',
-        };
+            correlationId: 'test-correlation-id',
+        } as Partial<Request> & { correlationId: string };
 
         mockResponse = {
             status: jest.fn().mockReturnThis(),
@@ -289,14 +290,14 @@ describe('HttpExceptionFilter', () => {
                 );
             });
 
-            it('should use "N/A" when correlationId is not available', () => {
+            it('should use correlationId from request (set by middleware)', () => {
                 const exception = new BadRequestException('Test');
 
                 filter.catch(exception, mockArgumentsHost);
 
                 expect(mockResponse.json).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        correlationId: 'N/A',
+                        correlationId: 'test-correlation-id',
                     }),
                 );
             });
