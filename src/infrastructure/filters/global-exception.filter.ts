@@ -6,7 +6,6 @@ import {
     HttpStatus,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -17,7 +16,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<Response>();
         const request = ctx.getRequest<Request>();
-        const correlationId = (request as any).correlationId || uuidv4();
+        const correlationId = (request as any).correlationId;
         const timestamp = new Date().toISOString();
 
         // Always 500 - HttpExceptions are handled by HttpExceptionFilter

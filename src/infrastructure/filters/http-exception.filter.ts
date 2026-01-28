@@ -18,7 +18,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const statusCode = exception.getStatus();
         const exceptionResponse = exception.getResponse();
         const timestamp = new Date().toISOString();
-        const correlationId = (request as any).correlationId || 'N/A';
+        const correlationId = (request as any).correlationId;
 
         const message =
             typeof exceptionResponse === 'string'
@@ -27,7 +27,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
         const logMetadata = {
             statusCode,
-            message,
             path: request.url,
             method: request.method,
             correlationId,
@@ -37,14 +36,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
         if (statusCode >= 500) {
             this.logger.error(
-                `HTTP Exception: ${exception.message}`,
+                `HTTP Exception: ${message}`,
                 'HttpExceptionFilter',
                 exception.stack,
                 logMetadata,
             );
         } else {
             this.logger.warn(
-                `HTTP Exception: ${exception.message}`,
+                `HTTP Exception: ${message}`,
                 'HttpExceptionFilter',
                 logMetadata,
             );

@@ -69,11 +69,10 @@ describe('HttpExceptionFilter', () => {
                 filter.catch(exception, mockArgumentsHost);
 
                 expect(mockLogger.warn).toHaveBeenCalledWith(
-                    expect.stringContaining('HTTP Exception'),
+                    'HTTP Exception: Invalid input',
                     'HttpExceptionFilter',
                     expect.objectContaining({
                         statusCode: 400,
-                        message: 'Invalid input',
                     }),
                 );
                 expect(mockLogger.error).not.toHaveBeenCalled();
@@ -358,16 +357,16 @@ describe('HttpExceptionFilter', () => {
                 );
             });
 
-            it('should include message in log metadata', () => {
+            it('should include message in log message (not metadata)', () => {
                 const exception = new BadRequestException('Specific error message');
 
                 filter.catch(exception, mockArgumentsHost);
 
                 expect(mockLogger.warn).toHaveBeenCalledWith(
-                    expect.any(String),
+                    'HTTP Exception: Specific error message',
                     'HttpExceptionFilter',
                     expect.objectContaining({
-                        message: 'Specific error message',
+                        statusCode: 400,
                     }),
                 );
             });
