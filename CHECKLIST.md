@@ -2,7 +2,7 @@
 
 > A production-grade, centralized authentication and identity service.
 
-**Last Updated:** January 27, 2026
+**Last Updated:** January 28, 2026
 
 ---
 
@@ -110,8 +110,9 @@
 - [x] Header sanitization
 
 ### Middleware
-- [ ] `CorrelationIdMiddleware` - Request tracing
-- [ ] `HttpLoggerMiddleware` - Request/response logging
+- [x] `CorrelationIdMiddleware` - Request tracing
+- [x] `HttpLoggerMiddleware` - Request/response logging
+- [x] Barrel export (`index.ts`)
 
 ### Persistence (TypeORM)
 - [ ] `TypeOrmUserRepository` - User repository implementation
@@ -173,8 +174,8 @@
 - [x] `winston-logger.service.spec.ts`
 - [x] `global-exception.filter.spec.ts`
 - [x] `http-exception.filter.spec.ts`
-- [ ] `correlation-id.middleware.spec.ts`
-- [ ] `http-logger.middleware.spec.ts`
+- [x] `correlation-id.middleware.spec.ts`
+- [x] `http-logger.middleware.spec.ts`
 - [ ] Use case tests
 - [ ] Repository tests
 
@@ -222,11 +223,11 @@
 | Application Use Cases | 🔴 0% |
 | Infrastructure - Logging | ✅ 100% |
 | Infrastructure - Filters | ✅ 100% |
-| Infrastructure - Middleware | 🔴 0% |
+| Infrastructure - Middleware | ✅ 100% |
 | Infrastructure - Persistence | 🔴 0% |
 | Infrastructure - Security | 🔴 0% |
 | Interfaces - HTTP | 🟡 20% |
-| Testing | 🟡 30% |
+| Testing | 🟡 40% |
 | Documentation | 🟡 60% |
 
 ---

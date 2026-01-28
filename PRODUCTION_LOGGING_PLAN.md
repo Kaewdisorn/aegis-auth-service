@@ -2,8 +2,8 @@
 ## Aegis Auth Service
 
 **Date:** January 22, 2026  
-**Last Updated:** January 27, 2026  
-**Current Status:** Phase 1-3 Completed, Phase 4 Next  
+**Last Updated:** January 28, 2026  
+**Current Status:** Phase 1-4 Completed, Phase 5 Next  
 **Goal:** Production-ready logging for a central authentication service
 
 ---
@@ -48,10 +48,10 @@
 - Production file transports with daily rotation
 - IAppConfig for centralized configuration
 - Environment variables in `.env`
+- Request correlation/tracing (CorrelationIdMiddleware)
+- HTTP request/response logging (HttpLoggerMiddleware)
 
 ### 🔴 Remaining
-- Request correlation/tracing
-- HTTP request/response logging
 - Auth event logging (security audit trail)
 
 ---
@@ -100,94 +100,51 @@
 
 ---
 
-## 🔴 Phase 4: HTTP Request Logging (NEXT)
+## ✅ Phase 4: HTTP Request Logging (COMPLETED)
 
 > **Goal:** Trace every HTTP request through the system with correlation ID
 
 ### Step 4.1: Correlation ID Middleware
 **File:** `src/infrastructure/middleware/correlation-id.middleware.ts`
 
-```typescript
-@Injectable()
-export class CorrelationIdMiddleware implements NestMiddleware {
-  use(req: Request, res: Response, next: NextFunction) {
-    const correlationId = req.headers['x-correlation-id'] as string || uuidv4();
-    req['correlationId'] = correlationId;
-    res.setHeader('X-Correlation-ID', correlationId);
-    next();
-  }
-}
-```
-
-**Why:** 
-- Central auth service will be called by multiple backend services
-- Correlation ID allows tracing requests across service boundaries
-- Other services can pass `X-Correlation-ID` header to propagate trace
+**Completed:**
+- ✅ Generates UUID v4 if no `X-Correlation-ID` header
+- ✅ Propagates existing correlation ID from upstream services
+- ✅ Sets correlation ID on request object and response header
+- ✅ Unit tests (4 tests)
 
 ---
 
 ### Step 4.2: HTTP Logger Middleware
 **File:** `src/infrastructure/middleware/http-logger.middleware.ts`
 
-```typescript
-@Injectable()
-export class HttpLoggerMiddleware implements NestMiddleware {
-  constructor(@Inject(ILogger) private readonly logger: ILogger) {}
-
-  use(req: Request, res: Response, next: NextFunction) {
-    const startTime = Date.now();
-    const { method, originalUrl, ip } = req;
-    const correlationId = req['correlationId'];
-    const userAgent = req.headers['user-agent'];
-
-    res.on('finish', () => {
-      const duration = Date.now() - startTime;
-      const { statusCode } = res;
-
-      const metadata = {
-        correlationId,
-        method,
-        path: originalUrl,
-        statusCode,
-        duration,
-        ip,
-        userAgent,
-      };
-
-      if (statusCode >= 500) {
-        this.logger.error('HTTP Request', 'HttpLogger', undefined, metadata);
-      } else if (statusCode >= 400) {
-        this.logger.warn('HTTP Request', 'HttpLogger', metadata);
-      } else {
-        this.logger.info('HTTP Request', 'HttpLogger', metadata);
-      }
-    });
-
-    next();
-  }
-}
-```
+**Completed:**
+- ✅ Logs all HTTP requests on response finish
+- ✅ Captures method, path, statusCode, duration, ip, userAgent
+- ✅ Log levels: 2xx/3xx → info, 4xx → warn, 5xx → error
+- ✅ Unit tests (10 tests)
 
 ---
 
-### Step 4.3: Register Middleware
+### Step 4.3: Middleware Registration
 **File:** `src/app.module.ts`
 
-```typescript
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(CorrelationIdMiddleware, HttpLoggerMiddleware)
-      .forRoutes('*');
-  }
-}
-```
+**Completed:**
+- ✅ AppModule implements NestModule
+- ✅ Middleware applied to all routes (`'*'`)
+- ✅ Order: CorrelationIdMiddleware → HttpLoggerMiddleware
 
 ---
 
-### ❌ REMOVED: AsyncLocalStorage Service
-> **Reason:** Over-engineering. Correlation ID stored in `req.correlationId` is sufficient.
-> AsyncLocalStorage adds complexity without significant benefit for this service.
+### Step 4.4: Refactored Exception Filters
+**Files:**
+- `src/infrastructure/filters/global-exception.filter.ts`
+- `src/infrastructure/filters/http-exception.filter.ts`
+
+**Completed:**
+- ✅ Removed UUID generation (middleware handles it)
+- ✅ Use `req.correlationId` set by middleware
+- ✅ Tests updated
 
 ---
 
@@ -239,16 +196,20 @@ this.logger.info('User login successful', 'AuthService', {
 
 ---
 
-## 🟡 Phase 7: Testing & Documentation (PARTIAL)
+## ✅ Phase 7: Testing & Documentation (COMPLETED)
 
 ### Completed Tests
 - ✅ `winston-logger.service.spec.ts`
 - ✅ `global-exception.filter.spec.ts`
 - ✅ `http-exception.filter.spec.ts`
+- ✅ `correlation-id.middleware.spec.ts`
+- ✅ `http-logger.middleware.spec.ts`
 
-### TODO Tests
-- `correlation-id.middleware.spec.ts`
-- `http-logger.middleware.spec.ts`
+### Test Summary
+```
+Test Suites: 5 passed, 5 total
+Tests:       82 passed, 82 total
+```
 
 ---
 
@@ -259,33 +220,39 @@ this.logger.info('User login successful', 'AuthService', {
 | Phase 1 | Core Logger | ✅ COMPLETED |
 | Phase 2 | Exception Filters | ✅ COMPLETED |
 | Phase 3 | Production Config | ✅ COMPLETED |
-| Phase 4 | HTTP Request Logging | 🔴 NEXT |
-| Phase 5 | Auth Event Logging | 🔴 TODO |
+| Phase 4 | HTTP Request Logging | ✅ COMPLETED |
+| Phase 5 | Auth Event Logging | 🔴 NEXT |
 | ~~Phase 6~~ | ~~Monitoring~~ | ❌ REMOVED |
-| Phase 7 | Testing | 🟡 PARTIAL |
+| Phase 7 | Testing | ✅ COMPLETED |
 
 ---
 
 ## Next Steps
 
-1. **Phase 4.1:** Create `CorrelationIdMiddleware` (15 mins)
-2. **Phase 4.2:** Create `HttpLoggerMiddleware` (30 mins)
-3. **Phase 4.3:** Register middleware in AppModule (5 mins)
-4. **Phase 4.4:** Add unit tests (30 mins)
-5. **Phase 5:** Add auth event logging when auth features are implemented
+1. **Phase 5:** Add auth event logging when auth features are implemented
+   - Login success/failure
+   - Token issued/refreshed
+   - Logout
+   - Password changed
+   - Account locked
 
 ---
 
-## Files to Create/Modify
+## Files Created/Modified in Phase 4
 
 ### New Files
-- `src/infrastructure/middleware/correlation-id.middleware.ts`
-- `src/infrastructure/middleware/http-logger.middleware.ts`
-- `src/infrastructure/middleware/correlation-id.middleware.spec.ts`
-- `src/infrastructure/middleware/http-logger.middleware.spec.ts`
+- ✅ `src/infrastructure/middleware/correlation-id.middleware.ts`
+- ✅ `src/infrastructure/middleware/http-logger.middleware.ts`
+- ✅ `src/infrastructure/middleware/index.ts` (barrel export)
+- ✅ `src/infrastructure/middleware/correlation-id.middleware.spec.ts`
+- ✅ `src/infrastructure/middleware/http-logger.middleware.spec.ts`
 
-### Modify
-- `src/app.module.ts` - Register middleware
+### Modified
+- ✅ `src/app.module.ts` - Registered middleware, removed ConfigModule (moved to AppConfigModule)
+- ✅ `src/infrastructure/config/server-config.module.ts` - Added ConfigModule.forRoot()
+- ✅ `src/infrastructure/filters/global-exception.filter.ts` - Removed uuid import
+- ✅ `src/infrastructure/filters/http-exception.filter.ts` - Removed 'N/A' fallback
+- ✅ `package.json` - Added transformIgnorePatterns for Jest (uuid ESM)
 
 ---
 
@@ -327,5 +294,5 @@ ENABLE_FILE_LOGGING=false # Set to true in production
 ---
 
 **Plan Created:** January 22, 2026  
-**Last Updated:** January 27, 2026  
-**Status:** Phase 1-3 Completed ✅ | Phase 4 Next 🔴
+**Last Updated:** January 28, 2026  
+**Status:** Phase 1-4 Completed ✅ | Phase 5 Next 🔴
