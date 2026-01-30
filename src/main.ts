@@ -4,6 +4,7 @@ import { ILogger } from '@application/ports/logger.interface';
 import { GlobalExceptionFilter } from '@infrastructure/filters/global-exception.filter';
 import { HttpExceptionFilter } from '@infrastructure/filters/http-exception.filter';
 import { IAppConfig } from '@application/ports/config.interface';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -22,6 +23,14 @@ async function bootstrap() {
   app.useGlobalFilters(
     new GlobalExceptionFilter(logger),  // Lower priority - catches non-HTTP exceptions
     new HttpExceptionFilter(logger),    // Higher priority - catches HttpException first
+  );
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
   );
 
   try {
