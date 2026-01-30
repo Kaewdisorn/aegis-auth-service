@@ -14,12 +14,6 @@ async function bootstrap() {
   const config = app.get<IAppConfig>(IAppConfig);
   const logger = app.get<ILogger>(ILogger);
 
-  logger.info('Starting Aegis Auth Service...', 'Bootstrap', {
-    environment: config.appConfig.nodeEnv,
-    nodeVersion: process.version,
-    pid: process.pid,
-  });
-
   app.useGlobalFilters(
     new GlobalExceptionFilter(logger),  // Lower priority - catches non-HTTP exceptions
     new HttpExceptionFilter(logger),    // Higher priority - catches HttpException first
@@ -36,17 +30,26 @@ async function bootstrap() {
   try {
     await app.listen(config.appConfig.port);
 
-    logger.info(`Aegis Auth Service started successfully`, 'Bootstrap', {
+    logger.info(`🚀 Aegis Auth Service started successfully`, 'Bootstrap', {
       url: `http://${config.appConfig.host}:${config.appConfig.port}`,
-      environment: config.appConfig.nodeEnv,
-      port: config.appConfig.port,
       host: config.appConfig.host,
+      port: config.appConfig.port,
+      environment: config.appConfig.nodeEnv,
+      nodeVersion: process.version,
+      pid: process.pid,
     });
 
-    logger.info('Service health check passed', 'Bootstrap', {
-      status: 'healthy',
-      uptime: process.uptime(),
-    });
+    // logger.info('Starting Aegis Auth Service...', 'Bootstrap', {
+    //   environment: config.appConfig.nodeEnv,
+    //   nodeVersion: process.version,
+    //   pid: process.pid,
+    // });
+
+    // logger.info('Service health check passed', 'Bootstrap', {
+    //   status: 'healthy',
+    //   uptime: process.uptime(),
+    // });
+
   } catch (error) {
     logger.error(
       'Failed to start Aegis Auth Service',
