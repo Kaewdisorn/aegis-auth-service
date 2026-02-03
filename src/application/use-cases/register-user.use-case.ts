@@ -6,7 +6,6 @@ import { Injectable } from "@nestjs/common";
 export class RegisterUserUseCase {
 
     async execute(dto: RegisterUserDto) {
-        console.log('Registering user with email:', dto.email);
         const email = Email.create(dto.email);
         console.log('Created Email VO:', email.toString());
     }
