@@ -9,5 +9,11 @@ export class Password {
         return '';
     }
 
+    private static validate(password: string): string[] {
+        const errors: string[] = [];
+
+        return errors;
+    }
+
 }
 
