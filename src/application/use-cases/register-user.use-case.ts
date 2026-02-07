@@ -9,8 +9,10 @@ export class RegisterUserUseCase {
     async execute(dto: RegisterUserDto) {
         // Create value objects (validates format)
         const email = Email.create(dto.email);
-        Password.create(dto.password);
+        Password.create(dto.password); // validates password format
         console.log('Created Email VO:', email.toString());
         console.log('Created Password VO:', Password.create(dto.password).toString());
+
+        // Check if user already exists
     }
 }
