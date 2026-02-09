@@ -2,7 +2,8 @@
 ## Aegis Auth Service
 
 **Date:** January 28, 2026  
-**Status:** Ready for Implementation  
+**Updated:** February 9, 2026  
+**Status:** In Progress  
 **Goal:** Implement user registration endpoint with Clean Architecture
 
 ---
@@ -17,13 +18,74 @@ Build a complete user registration flow following Clean Architecture principles:
 
 ---
 
+## Current State Assessment
+
+### What Already Exists (✅ Done)
+
+| File | Status | Notes |
+|------|--------|-------|
+| `src/domain/value-objects/email.vo.ts` | ✅ Complete | Matches plan exactly |
+| `src/domain/value-objects/password.vo.ts` | ⚠️ Partial | Missing `fromHash()` method and `toString()` returning `[REDACTED]` |
+| `src/domain/entities/user.entity.ts` | ❌ Empty | File exists but has no content |
+| `src/application/dtos/register-user.dto.ts` | ⚠️ Partial | Missing `@Matches` validators for uppercase/lowercase/number |
+| `src/application/use-cases/register-user.use-case.ts` | ⚠️ Partial | Stub only — no DI, no repository/hasher/logger, has console.log |
+| `src/application/ports/config.interface.ts` | ⚠️ Needs update | Missing `DatabaseConfig` |
+| `src/application/ports/logger.interface.ts` | ✅ Complete | Full ILogger with metadata interfaces |
+| `src/infrastructure/config/config.ts` | ⚠️ Needs update | Missing `database` getter |
+| `src/infrastructure/config/server-config.module.ts` | ✅ Complete | AppConfigModule with IAppConfig provider |
+| `src/infrastructure/logging/winston-logger.service.ts` | ✅ Complete | Full WinstonLoggerService with PII filtering |
+| `src/infrastructure/logging/logger.module.ts` | ✅ Complete | LoggerModule exporting ILogger |
+| `src/infrastructure/filters/global-exception.filter.ts` | ✅ Complete | Global exception handling |
+| `src/infrastructure/filters/http-exception.filter.ts` | ✅ Complete | HTTP exception handling |
+| `src/infrastructure/middleware/correlation-id.middleware.ts` | ✅ Complete | Correlation ID middleware |
+| `src/infrastructure/middleware/http-logger.middleware.ts` | ✅ Complete | HTTP logging middleware |
+| `src/interfaces/http/controllers/auth.controller.ts` | ⚠️ Needs update | Route is `@Post('/')` instead of `@Post('register')`, no response DTO, no HttpCode |
+| `src/interfaces/http/auth.module.ts` | ⚠️ Needs update | Missing PersistenceModule, SecurityModule, LoggerModule imports |
+| `src/app.module.ts` | ✅ Complete | Middleware configured, modules wired |
+| `src/main.ts` | ✅ Complete | ValidationPipe + GlobalFilters already configured |
+| `package.json` | ⚠️ Partial | Has `@nestjs/typeorm`, `typeorm`, `pg`, `class-validator`, `class-transformer`. Missing `bcrypt`, `@types/bcrypt` |
+| `tsconfig.json` | ✅ Complete | Path aliases for `@application`, `@infrastructure`, `@domain`, `@interfaces` |
+
+### What Needs to Be Created (❌ Missing)
+
+| File | Phase |
+|------|-------|
+| `src/domain/value-objects/user-id.vo.ts` | Phase 1.1 |
+| `src/domain/value-objects/index.ts` | Phase 1.1 |
+| `src/domain/entities/index.ts` | Phase 1.2 |
+| `src/domain/repositories/user.repository.interface.ts` | Phase 1.3 |
+| `src/domain/repositories/index.ts` | Phase 1.3 |
+| `src/domain/exceptions/domain.exception.ts` | Phase 1.4 |
+| `src/domain/exceptions/user-already-exists.exception.ts` | Phase 1.4 |
+| `src/domain/exceptions/index.ts` | Phase 1.4 |
+| `src/domain/index.ts` | Phase 1.5 |
+| `src/application/ports/password-hasher.interface.ts` | Phase 3.1 |
+| `src/application/dtos/user-response.dto.ts` | Phase 4.1 |
+| `src/application/dtos/index.ts` | Phase 4.1 |
+| `src/application/use-cases/index.ts` | Phase 4.2 |
+| `src/application/ports/index.ts` | Phase 3.2 |
+| `src/infrastructure/persistence/entities/user.typeorm-entity.ts` | Phase 5.1 |
+| `src/infrastructure/persistence/entities/index.ts` | Phase 5.1 |
+| `src/infrastructure/persistence/repositories/typeorm-user.repository.ts` | Phase 5.2 |
+| `src/infrastructure/persistence/repositories/index.ts` | Phase 5.2 |
+| `src/infrastructure/persistence/persistence.module.ts` | Phase 5.3 |
+| `src/infrastructure/persistence/index.ts` | Phase 5.3 |
+| `src/infrastructure/security/bcrypt-password-hasher.ts` | Phase 6.1 |
+| `src/infrastructure/security/security.module.ts` | Phase 6.2 |
+| `src/infrastructure/security/index.ts` | Phase 6.2 |
+
+---
+
 ## Prerequisites
 
 ### Install Dependencies
 ```bash
-npm install @nestjs/typeorm typeorm pg bcrypt @nestjs/jwt class-validator class-transformer
+npm install bcrypt
 npm install --save-dev @types/bcrypt
 ```
+
+> **Already installed:** `@nestjs/typeorm`, `typeorm`, `pg`, `class-validator`, `class-transformer`, `uuid`
+> **Not needed:** `@nestjs/jwt` (for login phase, not registration)
 
 ---
 
@@ -33,7 +95,7 @@ npm install --save-dev @types/bcrypt
 
 #### 1.1 Value Objects
 
-**File: `src/domain/value-objects/user-id.vo.ts`**
+**CREATE File: `src/domain/value-objects/user-id.vo.ts`**
 ```typescript
 import { randomUUID } from 'crypto';
 
@@ -61,49 +123,8 @@ export class UserId {
 }
 ```
 
-**File: `src/domain/value-objects/email.vo.ts`**
+**UPDATE File: `src/domain/value-objects/password.vo.ts`** — Add missing `fromHash()` and `toString()`:
 ```typescript
-export class Email {
-  private static readonly EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  private constructor(public readonly value: string) {}
-
-  static create(email: string): Email {
-    if (!email || !Email.EMAIL_REGEX.test(email)) {
-      throw new Error('Invalid email format');
-    }
-    return new Email(email.toLowerCase().trim());
-  }
-
-  equals(other: Email): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
-}
-```
-
-**File: `src/domain/value-objects/password.vo.ts`**
-```typescript
-export class Password {
-  private static readonly MIN_LENGTH = 8;
-  private static readonly MAX_LENGTH = 128;
-
-  private constructor(public readonly value: string) {}
-
-  /**
-   * Creates a Password value object from plain text (for validation before hashing)
-   */
-  static create(plainPassword: string): Password {
-    const errors = Password.validate(plainPassword);
-    if (errors.length > 0) {
-      throw new Error(`Invalid password: ${errors.join(', ')}`);
-    }
-    return new Password(plainPassword);
-  }
-
   /**
    * Creates a Password value object from an already-hashed password (from DB)
    */
@@ -114,44 +135,16 @@ export class Password {
     return new Password(hashedPassword);
   }
 
-  private static validate(password: string): string[] {
-    const errors: string[] = [];
-
-    if (!password) {
-      errors.push('Password is required');
-      return errors;
-    }
-
-    if (password.length < Password.MIN_LENGTH) {
-      errors.push(`Password must be at least ${Password.MIN_LENGTH} characters`);
-    }
-
-    if (password.length > Password.MAX_LENGTH) {
-      errors.push(`Password must be at most ${Password.MAX_LENGTH} characters`);
-    }
-
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
-    }
-
-    if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
-    }
-
-    if (!/[0-9]/.test(password)) {
-      errors.push('Password must contain at least one number');
-    }
-
-    return errors;
-  }
+  // ... existing validate() ...
 
   toString(): string {
     return '[REDACTED]';
   }
-}
 ```
 
-**File: `src/domain/value-objects/index.ts`**
+**File: `src/domain/value-objects/email.vo.ts`** — ✅ No changes needed
+
+**CREATE File: `src/domain/value-objects/index.ts`**
 ```typescript
 export * from './user-id.vo';
 export * from './email.vo';
@@ -162,7 +155,7 @@ export * from './password.vo';
 
 #### 1.2 Domain Entities
 
-**File: `src/domain/entities/user.entity.ts`**
+**WRITE File: `src/domain/entities/user.entity.ts`** (currently empty)
 ```typescript
 import { UserId, Email } from '../value-objects';
 
@@ -189,9 +182,6 @@ export class User {
     this.updatedAt = props.updatedAt;
   }
 
-  /**
-   * Create a new User (for registration)
-   */
   static create(email: Email, passwordHash: string): User {
     const now = new Date();
     return new User({
@@ -203,16 +193,10 @@ export class User {
     });
   }
 
-  /**
-   * Reconstitute User from persistence
-   */
   static reconstitute(props: UserProps): User {
     return new User(props);
   }
 
-  /**
-   * Returns a new User with updated password
-   */
   changePassword(newPasswordHash: string): User {
     return new User({
       ...this.toProps(),
@@ -233,7 +217,7 @@ export class User {
 }
 ```
 
-**File: `src/domain/entities/index.ts`**
+**CREATE File: `src/domain/entities/index.ts`**
 ```typescript
 export * from './user.entity';
 ```
@@ -242,7 +226,7 @@ export * from './user.entity';
 
 #### 1.3 Repository Interfaces
 
-**File: `src/domain/repositories/user.repository.interface.ts`**
+**CREATE File: `src/domain/repositories/user.repository.interface.ts`**
 ```typescript
 import { User } from '../entities';
 import { Email, UserId } from '../value-objects';
@@ -257,7 +241,7 @@ export interface IUserRepository {
 export const IUserRepository = Symbol('IUserRepository');
 ```
 
-**File: `src/domain/repositories/index.ts`**
+**CREATE File: `src/domain/repositories/index.ts`**
 ```typescript
 export * from './user.repository.interface';
 ```
@@ -266,7 +250,7 @@ export * from './user.repository.interface';
 
 #### 1.4 Domain Exceptions
 
-**File: `src/domain/exceptions/domain.exception.ts`**
+**CREATE File: `src/domain/exceptions/domain.exception.ts`**
 ```typescript
 export abstract class DomainException extends Error {
   constructor(
@@ -280,7 +264,7 @@ export abstract class DomainException extends Error {
 }
 ```
 
-**File: `src/domain/exceptions/user-already-exists.exception.ts`**
+**CREATE File: `src/domain/exceptions/user-already-exists.exception.ts`**
 ```typescript
 import { DomainException } from './domain.exception';
 
@@ -294,7 +278,7 @@ export class UserAlreadyExistsException extends DomainException {
 }
 ```
 
-**File: `src/domain/exceptions/index.ts`**
+**CREATE File: `src/domain/exceptions/index.ts`**
 ```typescript
 export * from './domain.exception';
 export * from './user-already-exists.exception';
@@ -304,7 +288,7 @@ export * from './user-already-exists.exception';
 
 #### 1.5 Domain Root Export
 
-**File: `src/domain/index.ts`**
+**CREATE File: `src/domain/index.ts`**
 ```typescript
 export * from './entities';
 export * from './value-objects';
@@ -317,7 +301,7 @@ export * from './exceptions';
 ### Phase 2: Configuration Extension
 
 #### 2.1 Update Application Ports
-**File:** `src/application/ports/config.interface.ts`
+**UPDATE File:** `src/application/ports/config.interface.ts`
 
 Add `DatabaseConfig` interface and update `IAppConfig`:
 ```typescript
@@ -339,19 +323,20 @@ export interface IAppConfig {
 ---
 
 #### 2.2 Update Config Service
-**File:** `src/infrastructure/config/config.ts`
+**UPDATE File:** `src/infrastructure/config/config.ts`
 
-Add `database` getter to `AppConfigService`:
+Add `database` property to `AppConfigService` constructor:
 ```typescript
-get database(): DatabaseConfig {
-  return {
-    host: this.configService.get<string>('POSTGRES_HOST', 'localhost'),
-    port: this.configService.get<number>('POSTGRES_PORT', 5432),
-    database: this.configService.get<string>('POSTGRES_DB', 'db'),
-    username: this.configService.get<string>('POSTGRES_USER', 'db'),
-    password: this.configService.get<string>('POSTGRES_PASSWORD', 'db'),
-  };
-}
+public readonly database: DatabaseConfig;
+
+// Inside constructor, add:
+this.database = {
+  host: this.configService.get<string>('POSTGRES_HOST', 'localhost'),
+  port: this.configService.get<number>('POSTGRES_PORT', 5432),
+  database: this.configService.get<string>('POSTGRES_DB', 'db'),
+  username: this.configService.get<string>('POSTGRES_USER', 'db'),
+  password: this.configService.get<string>('POSTGRES_PASSWORD', 'db'),
+};
 ```
 
 ---
@@ -360,7 +345,7 @@ get database(): DatabaseConfig {
 
 #### 3.1 Password Hasher Interface
 
-**File: `src/application/ports/password-hasher.interface.ts`**
+**CREATE File: `src/application/ports/password-hasher.interface.ts`**
 ```typescript
 export interface IPasswordHasher {
   hash(password: string): Promise<string>;
@@ -370,9 +355,9 @@ export interface IPasswordHasher {
 export const IPasswordHasher = Symbol('IPasswordHasher');
 ```
 
-#### 3.2 Update Ports Index
+#### 3.2 Create Ports Index
 
-**File: `src/application/ports/index.ts`**
+**CREATE File: `src/application/ports/index.ts`**
 ```typescript
 export * from './config.interface';
 export * from './logger.interface';
@@ -385,7 +370,7 @@ export * from './password-hasher.interface';
 
 #### 4.1 DTOs
 
-**File: `src/application/dtos/register-user.dto.ts`**
+**UPDATE File: `src/application/dtos/register-user.dto.ts`** — Add `@Matches` validators:
 ```typescript
 import { IsEmail, IsNotEmpty, IsString, MinLength, Matches } from 'class-validator';
 
@@ -404,7 +389,7 @@ export class RegisterUserDto {
 }
 ```
 
-**File: `src/application/dtos/user-response.dto.ts`**
+**CREATE File: `src/application/dtos/user-response.dto.ts`**
 ```typescript
 export class UserResponseDto {
   id: string;
@@ -423,7 +408,7 @@ export class UserResponseDto {
 }
 ```
 
-**File: `src/application/dtos/index.ts`**
+**CREATE File: `src/application/dtos/index.ts`**
 ```typescript
 export * from './register-user.dto';
 export * from './user-response.dto';
@@ -433,13 +418,13 @@ export * from './user-response.dto';
 
 #### 4.2 Use Case
 
-**File: `src/application/use-cases/register-user.use-case.ts`**
+**REWRITE File: `src/application/use-cases/register-user.use-case.ts`** — Current is a stub with console.log, needs full implementation:
 ```typescript
 import { Inject, Injectable, ConflictException } from '@nestjs/common';
 import { IUserRepository } from '@domain/repositories';
 import { IPasswordHasher } from '@application/ports';
-import { Email, Password, User } from '@domain';
-import { UserAlreadyExistsException } from '@domain/exceptions';
+import { Email, Password } from '@domain/value-objects';
+import { User } from '@domain/entities';
 import { ILogger } from '@application/ports';
 import { RegisterUserDto } from '../dtos';
 
@@ -491,7 +476,7 @@ export class RegisterUserUseCase {
 }
 ```
 
-**File: `src/application/use-cases/index.ts`**
+**CREATE File: `src/application/use-cases/index.ts`**
 ```typescript
 export * from './register-user.use-case';
 ```
@@ -502,7 +487,7 @@ export * from './register-user.use-case';
 
 #### 5.1 TypeORM Entity
 
-**File: `src/infrastructure/persistence/entities/user.typeorm-entity.ts`**
+**CREATE File: `src/infrastructure/persistence/entities/user.typeorm-entity.ts`**
 ```typescript
 import { Entity, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
@@ -525,7 +510,7 @@ export class UserEntity {
 }
 ```
 
-**File: `src/infrastructure/persistence/entities/index.ts`**
+**CREATE File: `src/infrastructure/persistence/entities/index.ts`**
 ```typescript
 export * from './user.typeorm-entity';
 ```
@@ -534,7 +519,7 @@ export * from './user.typeorm-entity';
 
 #### 5.2 Repository Implementation
 
-**File: `src/infrastructure/persistence/repositories/typeorm-user.repository.ts`**
+**CREATE File: `src/infrastructure/persistence/repositories/typeorm-user.repository.ts`**
 ```typescript
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -594,7 +579,7 @@ export class TypeOrmUserRepository implements IUserRepository {
 }
 ```
 
-**File: `src/infrastructure/persistence/repositories/index.ts`**
+**CREATE File: `src/infrastructure/persistence/repositories/index.ts`**
 ```typescript
 export * from './typeorm-user.repository';
 ```
@@ -603,11 +588,10 @@ export * from './typeorm-user.repository';
 
 #### 5.3 Persistence Module
 
-**File: `src/infrastructure/persistence/persistence.module.ts`**
+**CREATE File: `src/infrastructure/persistence/persistence.module.ts`**
 ```typescript
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
 import { IAppConfig } from '@application/ports';
 import { AppConfigModule } from '../config/server-config.module';
 import { UserEntity } from './entities/user.typeorm-entity';
@@ -644,7 +628,7 @@ import { IUserRepository } from '@domain/repositories';
 export class PersistenceModule {}
 ```
 
-**File: `src/infrastructure/persistence/index.ts`**
+**CREATE File: `src/infrastructure/persistence/index.ts`**
 ```typescript
 export * from './persistence.module';
 export * from './entities';
@@ -657,7 +641,7 @@ export * from './repositories';
 
 #### 6.1 Password Hasher Implementation
 
-**File: `src/infrastructure/security/bcrypt-password-hasher.ts`**
+**CREATE File: `src/infrastructure/security/bcrypt-password-hasher.ts`**
 ```typescript
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -681,7 +665,7 @@ export class BcryptPasswordHasher implements IPasswordHasher {
 
 #### 6.2 Security Module
 
-**File: `src/infrastructure/security/security.module.ts`**
+**CREATE File: `src/infrastructure/security/security.module.ts`**
 ```typescript
 import { Module } from '@nestjs/common';
 import { IPasswordHasher } from '@application/ports';
@@ -699,7 +683,7 @@ import { BcryptPasswordHasher } from './bcrypt-password-hasher';
 export class SecurityModule {}
 ```
 
-**File: `src/infrastructure/security/index.ts`**
+**CREATE File: `src/infrastructure/security/index.ts`**
 ```typescript
 export * from './security.module';
 export * from './bcrypt-password-hasher';
@@ -711,7 +695,7 @@ export * from './bcrypt-password-hasher';
 
 #### 7.1 Update Auth Controller
 
-**File: `src/interfaces/http/controllers/auth.controller.ts`**
+**UPDATE File: `src/interfaces/http/controllers/auth.controller.ts`** — Change route from `@Post('/')` to `@Post('register')`, add `HttpCode`, use `UserResponseDto`:
 ```typescript
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { RegisterUserUseCase } from '@application/use-cases';
@@ -734,7 +718,7 @@ export class AuthController {
 
 #### 7.2 Update Auth Module
 
-**File: `src/interfaces/http/auth.module.ts`**
+**UPDATE File: `src/interfaces/http/auth.module.ts`** — Add PersistenceModule, SecurityModule, LoggerModule imports:
 ```typescript
 import { Module } from '@nestjs/common';
 import { AuthController } from './controllers/auth.controller';
@@ -755,33 +739,67 @@ export class AuthModule {}
 
 ### Phase 8: Enable Global Validation
 
-#### 8.1 Update Main Bootstrap
+**`src/main.ts`** — ✅ No changes needed. ValidationPipe already configured with `whitelist`, `forbidNonWhitelisted`, `transform`.
 
-**File: `src/main.ts`**
-```typescript
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { IAppConfig } from '@application/ports';
-import { ValidationPipe } from '@nestjs/common';
+**`src/app.module.ts`** — ✅ No changes needed. PersistenceModule will be imported via AuthModule.
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  
-  const config = app.get<IAppConfig>(IAppConfig);
-  
-  // Enable validation globally
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+---
 
-  await app.listen(config.appConfig.port, config.appConfig.host);
-  console.log(`🚀 Application running on http://${config.appConfig.host}:${config.appConfig.port}`);
-}
-bootstrap();
+## Implementation Summary
+
+### Files to CREATE (23 new files):
+1. `src/domain/value-objects/user-id.vo.ts`
+2. `src/domain/value-objects/index.ts`
+3. `src/domain/entities/index.ts`
+4. `src/domain/repositories/user.repository.interface.ts`
+5. `src/domain/repositories/index.ts`
+6. `src/domain/exceptions/domain.exception.ts`
+7. `src/domain/exceptions/user-already-exists.exception.ts`
+8. `src/domain/exceptions/index.ts`
+9. `src/domain/index.ts`
+10. `src/application/ports/password-hasher.interface.ts`
+11. `src/application/ports/index.ts`
+12. `src/application/dtos/user-response.dto.ts`
+13. `src/application/dtos/index.ts`
+14. `src/application/use-cases/index.ts`
+15. `src/infrastructure/persistence/entities/user.typeorm-entity.ts`
+16. `src/infrastructure/persistence/entities/index.ts`
+17. `src/infrastructure/persistence/repositories/typeorm-user.repository.ts`
+18. `src/infrastructure/persistence/repositories/index.ts`
+19. `src/infrastructure/persistence/persistence.module.ts`
+20. `src/infrastructure/persistence/index.ts`
+21. `src/infrastructure/security/bcrypt-password-hasher.ts`
+22. `src/infrastructure/security/security.module.ts`
+23. `src/infrastructure/security/index.ts`
+
+### Files to UPDATE (6 existing files):
+1. `src/domain/value-objects/password.vo.ts` — Add `fromHash()` + `toString()`
+2. `src/domain/entities/user.entity.ts` — Write full content (currently empty)
+3. `src/application/ports/config.interface.ts` — Add `DatabaseConfig` + update `IAppConfig`
+4. `src/infrastructure/config/config.ts` — Add `database` property
+5. `src/application/dtos/register-user.dto.ts` — Add `@Matches` validators
+6. `src/application/use-cases/register-user.use-case.ts` — Full rewrite (current is stub)
+7. `src/interfaces/http/controllers/auth.controller.ts` — Route + response DTO + HttpCode
+8. `src/interfaces/http/auth.module.ts` — Add module imports
+
+### Files that need NO changes (already complete):
+- `src/domain/value-objects/email.vo.ts`
+- `src/application/ports/logger.interface.ts`
+- `src/infrastructure/logging/winston-logger.service.ts`
+- `src/infrastructure/logging/logger.module.ts`
+- `src/infrastructure/config/server-config.module.ts`
+- `src/infrastructure/filters/global-exception.filter.ts`
+- `src/infrastructure/filters/http-exception.filter.ts`
+- `src/infrastructure/middleware/correlation-id.middleware.ts`
+- `src/infrastructure/middleware/http-logger.middleware.ts`
+- `src/app.module.ts`
+- `src/main.ts`
+- `tsconfig.json`
+
+### Dependencies to install:
+```bash
+npm install bcrypt
+npm install --save-dev @types/bcrypt
 ```
 
 ---
@@ -792,6 +810,7 @@ bootstrap();
 1. **Domain Layer:**
    - `email.vo.spec.ts` - Email validation
    - `password.vo.spec.ts` - Password rules
+   - `user-id.vo.spec.ts` - UserId generation
    - `user.entity.spec.ts` - Entity creation
 
 2. **Application Layer:**
@@ -800,9 +819,6 @@ bootstrap();
 3. **Infrastructure Layer:**
    - `bcrypt-password-hasher.spec.ts` - Hashing functionality
    - `typeorm-user.repository.spec.ts` - Repository with test DB
-
-### Integration Tests
-- Test `RegisterUserUseCase` with real database (test container)
 
 ### E2E Tests
 - `POST /auth/register` with valid data → 201 Created
@@ -914,71 +930,50 @@ POSTGRES_PASSWORD=db
 
 ---
 
-## Logging Integration
-
-### Auth Events to Log
-
-Based on `PRODUCTION_LOGGING_PLAN.md` Phase 5:
-
-**Registration Success:**
-```typescript
-this.logger.info('User registered successfully', 'RegisterUserUseCase', {
-  userId: user.id.toString(),
-  email: user.email.toString(),
-  action: 'REGISTER_SUCCESS',
-});
-```
-
-**Registration Failed (Duplicate):**
-```typescript
-this.logger.warn('User registration failed: email already exists', 'RegisterUserUseCase', {
-  email: dto.email,
-  action: 'REGISTER_FAILED',
-  reason: 'DUPLICATE_EMAIL',
-});
-```
-
----
-
 ## File Structure Summary
 
 ```
 src/
-├── domain/                          # NEW - Pure TypeScript
+├── domain/
 │   ├── entities/
-│   │   ├── user.entity.ts
-│   │   └── index.ts
+│   │   ├── user.entity.ts           # WRITE (currently empty)
+│   │   └── index.ts                 # CREATE
 │   ├── value-objects/
-│   │   ├── user-id.vo.ts
-│   │   ├── email.vo.ts
-│   │   ├── password.vo.ts
-│   │   └── index.ts
-│   ├── repositories/
+│   │   ├── user-id.vo.ts            # CREATE
+│   │   ├── email.vo.ts              ✅ EXISTS - no changes
+│   │   ├── password.vo.ts           # UPDATE - add fromHash() + toString()
+│   │   └── index.ts                 # CREATE
+│   ├── repositories/                # CREATE (entire directory)
 │   │   ├── user.repository.interface.ts
 │   │   └── index.ts
-│   ├── exceptions/
+│   ├── exceptions/                  # CREATE (entire directory)
 │   │   ├── domain.exception.ts
 │   │   ├── user-already-exists.exception.ts
 │   │   └── index.ts
-│   └── index.ts
+│   └── index.ts                     # CREATE
 │
 ├── application/
-│   ├── dtos/                        # NEW
-│   │   ├── register-user.dto.ts
-│   │   ├── user-response.dto.ts
-│   │   └── index.ts
-│   ├── use-cases/                   # NEW
-│   │   ├── register-user.use-case.ts
-│   │   └── index.ts
+│   ├── dtos/
+│   │   ├── register-user.dto.ts     # UPDATE - add @Matches validators
+│   │   ├── user-response.dto.ts     # CREATE
+│   │   └── index.ts                 # CREATE
+│   ├── use-cases/
+│   │   ├── register-user.use-case.ts # REWRITE (stub → full)
+│   │   └── index.ts                 # CREATE
 │   └── ports/
-│       ├── config.interface.ts      # MODIFIED - Add DatabaseConfig
-│       ├── password-hasher.interface.ts  # NEW
-│       └── index.ts                 # MODIFIED
+│       ├── config.interface.ts      # UPDATE - add DatabaseConfig
+│       ├── logger.interface.ts      ✅ EXISTS - no changes
+│       ├── password-hasher.interface.ts  # CREATE
+│       └── index.ts                 # CREATE
 │
 ├── infrastructure/
 │   ├── config/
-│   │   └── config.ts                # MODIFIED - Add database getter
-│   ├── persistence/                 # NEW
+│   │   ├── config.ts                # UPDATE - add database property
+│   │   └── server-config.module.ts  ✅ EXISTS - no changes
+│   ├── logging/                     ✅ EXISTS - no changes
+│   ├── filters/                     ✅ EXISTS - no changes
+│   ├── middleware/                   ✅ EXISTS - no changes
+│   ├── persistence/                 # CREATE (entire directory)
 │   │   ├── entities/
 │   │   │   ├── user.typeorm-entity.ts
 │   │   │   └── index.ts
@@ -987,7 +982,7 @@ src/
 │   │   │   └── index.ts
 │   │   ├── persistence.module.ts
 │   │   └── index.ts
-│   └── security/                    # NEW
+│   └── security/                    # CREATE (entire directory)
 │       ├── bcrypt-password-hasher.ts
 │       ├── security.module.ts
 │       └── index.ts
@@ -995,10 +990,11 @@ src/
 ├── interfaces/
 │   └── http/
 │       ├── controllers/
-│       │   └── auth.controller.ts   # MODIFIED - Add register endpoint
-│       └── auth.module.ts           # MODIFIED - Wire dependencies
+│       │   └── auth.controller.ts   # UPDATE - route + response DTO
+│       └── auth.module.ts           # UPDATE - add module imports
 │
-└── main.ts                          # MODIFIED - Add ValidationPipe
+├── app.module.ts                    ✅ EXISTS - no changes
+└── main.ts                          ✅ EXISTS - no changes
 ```
 
 ---
@@ -1021,5 +1017,6 @@ src/
 ---
 
 **Plan Created:** January 28, 2026  
-**Status:** ✅ Ready for Implementation  
-**Estimated Effort:** 4-6 hours
+**Updated:** February 9, 2026  
+**Status:** 🔄 In Progress  
+**Estimated Remaining Effort:** 2-3 hours (foundation already built)
