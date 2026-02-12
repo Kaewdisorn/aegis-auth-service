@@ -1,3 +1,5 @@
+import { DomainValidationException } from '@domain/exceptions/domain-validation.exception';
+
 export class Password {
     private static readonly MIN_LENGTH = 8;
     private static readonly MAX_LENGTH = 128;
@@ -7,7 +9,7 @@ export class Password {
     static create(plainPassword: string): Password {
         const errors = Password.validate(plainPassword);
         if (errors.length > 0) {
-            throw new Error(`Invalid password: ${errors.join(', ')}`);
+            throw new DomainValidationException(errors);
         }
 
         return new Password(plainPassword);

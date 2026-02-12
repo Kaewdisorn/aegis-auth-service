@@ -1,3 +1,5 @@
+import { DomainValidationException } from '@domain/exceptions/domain-validation.exception';
+
 export class Email {
     private static readonly EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -5,7 +7,7 @@ export class Email {
 
     static create(email: string): Email {
         if (!email || !Email.EMAIL_REGEX.test(email)) {
-            throw new Error('Invalid email format');
+            throw new DomainValidationException('Invalid email format');
         }
         return new Email(email.toLowerCase().trim());
     }
