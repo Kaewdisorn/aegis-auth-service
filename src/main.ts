@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ILogger } from '@application/ports/logger.interface';
 import { GlobalExceptionFilter } from '@infrastructure/filters/global-exception.filter';
 import { HttpExceptionFilter } from '@infrastructure/filters/http-exception.filter';
+import { DomainExceptionFilter } from '@infrastructure/filters/domain-exception.filter';
 import { IAppConfig } from '@application/ports/config.interface';
 import { ValidationPipe } from '@nestjs/common';
 
@@ -15,8 +16,9 @@ async function bootstrap() {
   const logger = app.get<ILogger>(ILogger);
 
   app.useGlobalFilters(
-    new GlobalExceptionFilter(logger),  // Lower priority - catches non-HTTP exceptions
-    new HttpExceptionFilter(logger),    // Higher priority - catches HttpException first
+    new GlobalExceptionFilter(logger),  // Lowest priority - catches unhandled exceptions
+    new DomainExceptionFilter(logger),  // Mid priority - catches domain validation errors
+    new HttpExceptionFilter(logger),    // Highest priority - catches HttpException first
   );
 
   app.useGlobalPipes(
