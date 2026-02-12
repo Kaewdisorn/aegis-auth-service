@@ -22,7 +22,7 @@ export interface DatabaseConfig {
 export interface IAppConfig {
     readonly appConfig: AppConfig;
     readonly logger: LoggerConfig;
-    readonly database: DatabaseConfig;
+    // readonly database: DatabaseConfig;
 }
 
 export const IAppConfig = Symbol('IAppConfig');
