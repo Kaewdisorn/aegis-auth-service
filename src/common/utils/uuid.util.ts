@@ -4,31 +4,20 @@ import { v4 as uuidv4, v5 as uuidv5, validate as uuidValidate } from 'uuid';
 //  * Application-wide namespace UUID for generating deterministic UUIDs
 //  * This should NEVER be changed in production as it will affect all existing UUIDs
 //  */
-// export const APP_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // DNS namespace
+export const APP_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // DNS namespace
 
-// /**
-//  * Generates a random UUID v4
-//  * @returns A random UUID string
-//  */
+
 export function generateUUID(): string {
     return uuidv4();
 }
 
-// /**
-//  * Generates a deterministic UUID v5 from a string
-//  * Same input string will always produce the same UUID
-//  * @param value - The string to convert to UUID
-//  * @param namespace - Optional custom namespace UUID (defaults to APP_NAMESPACE)
-//  * @returns A deterministic UUID string
-//  */
-// export function generateUUIDFromString(
-//     value: string,
-//     namespace: string = APP_NAMESPACE,
-// ): string {
-//     // Normalize the string (trim and lowercase) for consistency
-//     const normalizedValue = value.trim().toLowerCase();
-//     return uuidv5(normalizedValue, namespace);
-// }
+export function generateUUIDFromString(
+    value: string,
+): string {
+    const namespace = APP_NAMESPACE;
+    const normalizedValue = value.trim().toLowerCase();
+    return uuidv5(normalizedValue, namespace);
+}
 
 // /**
 //  * Generates a deterministic UUID from an email address
