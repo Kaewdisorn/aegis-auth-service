@@ -10,7 +10,7 @@
 npm install @nestjs/typeorm typeorm pg
 ```
 
-- [ ] Install validation packages
+- [x] Install validation packages
 
 ```bash
 npm install class-validator class-transformer
@@ -55,12 +55,6 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ name: 'first_name' })
-  firstName: string;
-
-  @Column({ name: 'last_name' })
-  lastName: string;
-
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
@@ -101,7 +95,7 @@ export class UserAlreadyExistsException extends ConflictException {
 
 ## 3. Application Layer (`src/modules/user/application/`)
 
-- [ ] Create RegisterUserDto — `src/modules/user/application/dto/register-user.dto.ts`
+- [x] Create RegisterUserDto — `src/modules/user/application/dto/register-user.dto.ts`
 
 ```typescript
 import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
@@ -114,14 +108,6 @@ export class RegisterUserDto {
   @IsString()
   @MinLength(8)
   password: string;
-
-  @IsString()
-  @IsNotEmpty()
-  firstName: string;
-
-  @IsString()
-  @IsNotEmpty()
-  lastName: string;
 }
 ```
 
@@ -133,8 +119,6 @@ import { User } from '../../domain/user.entity.js';
 export class UserResponseDto {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
   isActive: boolean;
   createdAt: Date;
 
@@ -142,8 +126,6 @@ export class UserResponseDto {
     const dto = new UserResponseDto();
     dto.id = user.id;
     dto.email = user.email;
-    dto.firstName = user.firstName;
-    dto.lastName = user.lastName;
     dto.isActive = user.isActive;
     dto.createdAt = user.createdAt;
     return dto;
@@ -151,7 +133,7 @@ export class UserResponseDto {
 }
 ```
 
-- [ ] Create RegisterUserUseCase — `src/modules/user/application/use-cases/register-user.use-case.ts`
+- [ ] Create RegisterUserUseCase — `src/modules/user/application/use-cases/register-user.use-case.ts` — ⚠️ file exists but is an empty class stub
 
 ```typescript
 import { Inject, Injectable } from '@nestjs/common';
@@ -182,8 +164,6 @@ export class RegisterUserUseCase {
     const user = await this.userRepository.save({
       email: dto.email,
       password: hashedPassword,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
     });
 
     return UserResponseDto.fromEntity(user);
@@ -226,7 +206,7 @@ export class TypeOrmUserRepository implements IUserRepository {
 
 ## 5. Presentation Layer (`src/modules/user/presentation/`)
 
-- [ ] Create UserController — `src/modules/user/presentation/user.controller.ts`
+- [ ] Create UserController — `src/modules/user/presentation/user.controller.ts` — ⚠️ file exists but incomplete (no use-case injection, empty method body, missing `UserResponseDto` return type)
 
 ```typescript
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
@@ -250,7 +230,7 @@ export class UserController {
 
 ## 6. Module Wiring
 
-- [ ] Wire up `UserModule` — `src/modules/user/user.module.ts`
+- [ ] Wire up `UserModule` — `src/modules/user/user.module.ts` — ⚠️ file exists but incomplete (no `TypeOrmModule.forFeature`, no `USER_REPOSITORY` provider)
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -276,7 +256,7 @@ import { UserController } from './presentation/user.controller.js';
 export class UserModule {}
 ```
 
-- [ ] Update `AppModule` — `src/app.module.ts`
+- [ ] Update `AppModule` — `src/app.module.ts` — ⚠️ file exists but incomplete (no `ConfigModule`, no `TypeOrmModule` config)
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -312,7 +292,7 @@ import { User } from './modules/user/domain/user.entity.js';
 export class AppModule {}
 ```
 
-- [ ] Add ValidationPipe globally — `src/main.ts`
+- [ ] Add ValidationPipe globally — `src/main.ts` — ⚠️ file exists but missing `ValidationPipe` setup
 
 ```typescript
 import { NestFactory } from '@nestjs/core';
@@ -398,8 +378,6 @@ describe('RegisterUserUseCase', () => {
     const dto = {
       email: 'test@example.com',
       password: 'password123',
-      firstName: 'John',
-      lastName: 'Doe',
     };
 
     mockUserRepository.findByEmail.mockResolvedValue(null);
@@ -424,8 +402,6 @@ describe('RegisterUserUseCase', () => {
     const dto = {
       email: 'taken@example.com',
       password: 'password123',
-      firstName: 'Jane',
-      lastName: 'Doe',
     };
 
     mockUserRepository.findByEmail.mockResolvedValue({ id: 'existing-id' });
@@ -464,10 +440,8 @@ describe('UserController', () => {
     const dto = {
       email: 'test@example.com',
       password: 'password123',
-      firstName: 'John',
-      lastName: 'Doe',
     };
-    const expected = { id: 'uuid-1', email: dto.email, firstName: 'John', lastName: 'Doe', isActive: true, createdAt: new Date() };
+    const expected = { id: 'uuid-1', email: dto.email, isActive: true, createdAt: new Date() };
 
     mockRegisterUserUseCase.execute.mockResolvedValue(expected);
 
@@ -509,8 +483,6 @@ describe('User Registration (e2e)', () => {
       .send({
         email: 'new@example.com',
         password: 'securePass1',
-        firstName: 'Alice',
-        lastName: 'Smith',
       })
       .expect(201)
       .expect((res) => {
@@ -524,8 +496,6 @@ describe('User Registration (e2e)', () => {
     const dto = {
       email: 'dup@example.com',
       password: 'securePass1',
-      firstName: 'Bob',
-      lastName: 'Dup',
     };
     await request(app.getHttpServer()).post('/users/register').send(dto);
 
@@ -541,8 +511,6 @@ describe('User Registration (e2e)', () => {
       .send({
         email: 'not-an-email',
         password: 'securePass1',
-        firstName: 'Bad',
-        lastName: 'Input',
       })
       .expect(400);
   });
