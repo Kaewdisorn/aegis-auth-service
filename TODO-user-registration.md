@@ -47,16 +47,16 @@ import {
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  gid: string;
+
+  @PrimaryGeneratedColumn('increment')
+  uid: number;
 
   @Column({ unique: true })
   email: string;
 
   @Column()
   password: string;
-
-  @Column({ name: 'is_active', default: true })
-  isActive: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
@@ -117,16 +117,16 @@ export class RegisterUserDto {
 import { User } from '../../domain/user.entity.js';
 
 export class UserResponseDto {
-  id: string;
+  gid: string;
+  uid: number;
   email: string;
-  isActive: boolean;
   createdAt: Date;
 
   static fromEntity(user: User): UserResponseDto {
     const dto = new UserResponseDto();
-    dto.id = user.id;
+    dto.gid = user.gid;
+    dto.uid = user.uid;
     dto.email = user.email;
-    dto.isActive = user.isActive;
     dto.createdAt = user.createdAt;
     return dto;
   }
@@ -382,10 +382,10 @@ describe('RegisterUserUseCase', () => {
 
     mockUserRepository.findByEmail.mockResolvedValue(null);
     mockUserRepository.save.mockResolvedValue({
-      id: 'uuid-1',
+      gid: 'uuid-1',
+      uid: 1,
       ...dto,
       password: 'hashed',
-      isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -404,7 +404,7 @@ describe('RegisterUserUseCase', () => {
       password: 'password123',
     };
 
-    mockUserRepository.findByEmail.mockResolvedValue({ id: 'existing-id' });
+    mockUserRepository.findByEmail.mockResolvedValue({ gid: 'existing-gid' });
 
     await expect(useCase.execute(dto)).rejects.toThrow(
       UserAlreadyExistsException,
@@ -441,7 +441,7 @@ describe('UserController', () => {
       email: 'test@example.com',
       password: 'password123',
     };
-    const expected = { id: 'uuid-1', email: dto.email, isActive: true, createdAt: new Date() };
+    const expected = { gid: 'uuid-1', uid: 1, email: dto.email, createdAt: new Date() };
 
     mockRegisterUserUseCase.execute.mockResolvedValue(expected);
 
@@ -486,7 +486,8 @@ describe('User Registration (e2e)', () => {
       })
       .expect(201)
       .expect((res) => {
-        expect(res.body.id).toBeDefined();
+        expect(res.body.gid).toBeDefined();
+        expect(res.body.uid).toBeDefined();
         expect(res.body.email).toBe('new@example.com');
         expect(res.body).not.toHaveProperty('password');
       });
@@ -522,7 +523,7 @@ describe('User Registration (e2e)', () => {
 ## 9. Final Review
 
 - [ ] Verify error responses are consistent (NestJS exception filters)
-- [ ] Ensure no password leaks in any response DTO
+- [ ] Ensure no `password` leaks in any response DTO
 - [ ] Confirm `ValidationPipe` rejects unknown fields (`forbidNonWhitelisted: true`)
 - [ ] Check `synchronize: false` in production TypeORM config
 - [ ] Consider rate limiting on `/users/register` endpoint
