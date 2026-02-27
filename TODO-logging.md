@@ -4,7 +4,7 @@
 
 ## 1. Install Dependencies
 
-- [ ] Install Winston & NestJS integration
+- [x] Install Winston & NestJS integration
 
 ```bash
 npm install nest-winston winston
@@ -14,7 +14,7 @@ npm install nest-winston winston
 
 ## 2. Logger Configuration (`src/shared/logger/`)
 
-- [ ] Create Winston config — `src/shared/logger/winston.config.ts`
+- [x] Create Winston config — `src/shared/logger/winston.config.ts`
 
 ```typescript
 import { utilities } from 'nest-winston';
@@ -58,7 +58,7 @@ export const winstonConfig = {
 
 ## 3. Bootstrap Integration
 
-- [ ] Replace default logger in `src/main.ts`
+- [x] Replace default logger in `src/main.ts`
 
 ```typescript
 import { NestFactory } from '@nestjs/core';
