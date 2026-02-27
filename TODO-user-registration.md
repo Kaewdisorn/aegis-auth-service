@@ -4,7 +4,7 @@
 
 ## 1. Install Dependencies
 
-- [ ] Install TypeORM & database driver
+- [x] Install TypeORM & database driver
 
 ```bash
 npm install @nestjs/typeorm typeorm pg
@@ -33,7 +33,7 @@ npm install @nestjs/config
 
 ## 2. Domain Layer (`src/modules/user/domain/`)
 
-- [ ] Create User entity — `src/modules/user/domain/user.entity.ts`
+- [x] Create User entity — `src/modules/user/domain/user.entity.ts`
 
 ```typescript
 import {
@@ -46,11 +46,11 @@ import {
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn('uuid')
+  @Column({ type: 'uuid', generated: 'uuid' })
   gid: string;
 
-  @PrimaryGeneratedColumn('increment')
-  uid: number;
+  @PrimaryGeneratedColumn('uuid')
+  uid: string;
 
   @Column({ unique: true })
   email: string;
@@ -118,7 +118,7 @@ import { User } from '../../domain/user.entity.js';
 
 export class UserResponseDto {
   gid: string;
-  uid: number;
+  uid: string;
   email: string;
   createdAt: Date;
 
@@ -383,7 +383,7 @@ describe('RegisterUserUseCase', () => {
     mockUserRepository.findByEmail.mockResolvedValue(null);
     mockUserRepository.save.mockResolvedValue({
       gid: 'uuid-1',
-      uid: 1,
+      uid: 'uuid-2',
       ...dto,
       password: 'hashed',
       createdAt: new Date(),
@@ -441,7 +441,7 @@ describe('UserController', () => {
       email: 'test@example.com',
       password: 'password123',
     };
-    const expected = { gid: 'uuid-1', uid: 1, email: dto.email, createdAt: new Date() };
+    const expected = { gid: 'uuid-1', uid: 'uuid-2', email: dto.email, createdAt: new Date() };
 
     mockRegisterUserUseCase.execute.mockResolvedValue(expected);
 
