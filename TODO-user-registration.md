@@ -347,7 +347,7 @@ DB_DATABASE=aegis_auth
 
 ## 8. Testing
 
-- [ ] Unit test: RegisterUserUseCase — `src/modules/user/application/use-cases/register-user.use-case.spec.ts`
+- [x] Unit test: RegisterUserUseCase — `src/modules/user/application/use-cases/register-user.use-case.spec.ts`
 
 ```typescript
 import { Test, TestingModule } from '@nestjs/testing';
@@ -414,7 +414,7 @@ describe('RegisterUserUseCase', () => {
 });
 ```
 
-- [ ] Unit test: UserController — `src/modules/user/presentation/user.controller.spec.ts`
+- [x] Unit test: UserController — `src/modules/user/presentation/user.controller.spec.ts`
 
 ```typescript
 import { Test, TestingModule } from '@nestjs/testing';
