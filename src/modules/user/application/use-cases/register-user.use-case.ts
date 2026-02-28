@@ -15,6 +15,7 @@ export class RegisterUserUseCase {
 
     async execute(dto: RegisterUserDto): Promise<UserResponseDto> {
         const existingUser = await this.userRepository.findByEmail(dto.email);
+
         if (existingUser) {
             throw new UserAlreadyExistsException(dto.email);
         }

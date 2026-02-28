@@ -24,6 +24,7 @@ describe('RegisterUserUseCase', () => {
 
     it('should register a new user successfully', async () => {
         const dto = {
+            serviceName: 'test-service',
             email: 'test@example.com',
             password: 'password123',
         };
@@ -48,6 +49,7 @@ describe('RegisterUserUseCase', () => {
 
     it('should throw UserAlreadyExistsException if email is taken', async () => {
         const dto = {
+            serviceName: 'test-service',
             email: 'taken@example.com',
             password: 'password123',
         };

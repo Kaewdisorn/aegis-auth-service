@@ -19,6 +19,7 @@ describe('UserController', () => {
 
     it('should call RegisterUserUseCase and return result', async () => {
         const dto = {
+            serviceName: 'test-service',
             email: 'test@example.com',
             password: 'password123',
         };
