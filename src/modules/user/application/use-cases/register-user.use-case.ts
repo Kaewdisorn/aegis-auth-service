@@ -23,6 +23,7 @@ export class RegisterUserUseCase {
         const hashedPassword = await bcrypt.hash(dto.password, 10);
 
         const user = await this.userRepository.save({
+            serviceName: dto.serviceName,
             email: dto.email,
             password: hashedPassword,
         });
