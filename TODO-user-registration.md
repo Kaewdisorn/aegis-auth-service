@@ -175,7 +175,7 @@ export class RegisterUserUseCase {
 
 ## 4. Infrastructure Layer (`src/modules/user/infrastructure/`)
 
-- [ ] Create TypeOrmUserRepository — `src/modules/user/infrastructure/typeorm-user.repository.ts`
+- [x] Create TypeOrmUserRepository — `src/modules/user/infrastructure/typeorm-user.repository.ts`
 
 ```typescript
 import { Injectable } from '@nestjs/common';
@@ -230,7 +230,7 @@ export class UserController {
 
 ## 6. Module Wiring
 
-- [ ] Wire up `UserModule` — `src/modules/user/user.module.ts` — ⚠️ file exists but incomplete (no `TypeOrmModule.forFeature`, no `USER_REPOSITORY` provider)
+- [x] Wire up `UserModule` — `src/modules/user/user.module.ts`
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -256,7 +256,7 @@ import { UserController } from './presentation/user.controller.js';
 export class UserModule {}
 ```
 
-- [ ] Update `AppModule` — `src/app.module.ts` — ⚠️ file exists but incomplete (no `ConfigModule`, no `TypeOrmModule` config)
+- [x] Update `AppModule` — `src/app.module.ts`
 
 ```typescript
 import { Module } from '@nestjs/common';
