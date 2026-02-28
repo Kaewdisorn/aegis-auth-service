@@ -30,6 +30,7 @@ describe('User Registration (e2e)', () => {
         return request(app.getHttpServer())
             .post('/users/register')
             .send({
+                serviceName: 'e2e-test',
                 email: `e2e-${Date.now()}@example.com`,
                 password: 'securePass1',
             })
@@ -45,7 +46,7 @@ describe('User Registration (e2e)', () => {
 
     it('POST /users/register — duplicate email (409)', async () => {
         const email = `e2e-dup-${Date.now()}@example.com`;
-        const dto = { email, password: 'securePass1' };
+        const dto = { serviceName: 'e2e-test', email, password: 'securePass1' };
 
         await request(app.getHttpServer())
             .post('/users/register')
@@ -62,6 +63,7 @@ describe('User Registration (e2e)', () => {
         return request(app.getHttpServer())
             .post('/users/register')
             .send({
+                serviceName: 'e2e-test',
                 email: 'not-an-email',
                 password: 'securePass1',
             })
@@ -72,6 +74,7 @@ describe('User Registration (e2e)', () => {
         return request(app.getHttpServer())
             .post('/users/register')
             .send({
+                serviceName: 'e2e-test',
                 email: `e2e-short-${Date.now()}@example.com`,
                 password: 'short',
             })
@@ -82,6 +85,7 @@ describe('User Registration (e2e)', () => {
         return request(app.getHttpServer())
             .post('/users/register')
             .send({
+                serviceName: 'e2e-test',
                 email: `e2e-extra-${Date.now()}@example.com`,
                 password: 'securePass1',
                 role: 'admin',
