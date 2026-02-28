@@ -13,25 +13,25 @@ export const NAMESPACE = 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
 @Entity('users')
 export class User {
     @Column({ type: 'uuid' })
-    gid: string;
+    gid!: string;
 
     @PrimaryColumn({ type: 'uuid' })
-    uid: string;
+    uid!: string;
 
     @Column()
-    serviceName: string;
+    serviceName!: string;
 
     @Column({ unique: true })
-    email: string;
+    email!: string;
 
     @Column()
-    password: string;
+    password!: string;
 
     @CreateDateColumn({ name: 'created_at' })
-    createdAt: Date;
+    createdAt!: Date;
 
     @UpdateDateColumn({ name: 'updated_at' })
-    updatedAt: Date;
+    updatedAt!: Date;
 
     @BeforeInsert()
     generateIds() {
