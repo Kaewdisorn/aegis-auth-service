@@ -66,7 +66,7 @@ export class User {
 }
 ```
 
-- [ ] Create UserRepository interface (port) — `src/modules/user/domain/user-repository.interface.ts`
+- [x] Create UserRepository interface (port) — `src/modules/user/domain/user-repository.interface.ts`
 
 ```typescript
 import { User } from './user.entity.js';
@@ -111,7 +111,7 @@ export class RegisterUserDto {
 }
 ```
 
-- [ ] Create UserResponseDto — `src/modules/user/application/dto/user-response.dto.ts`
+- [x] Create UserResponseDto — `src/modules/user/application/dto/user-response.dto.ts`
 
 ```typescript
 import { User } from '../../domain/user.entity.js';
@@ -206,7 +206,7 @@ export class TypeOrmUserRepository implements IUserRepository {
 
 ## 5. Presentation Layer (`src/modules/user/presentation/`)
 
-- [ ] Create UserController — `src/modules/user/presentation/user.controller.ts` — ⚠️ file exists but incomplete (no use-case injection, empty method body, missing `UserResponseDto` return type)
+- [x] Create UserController — `src/modules/user/presentation/user.controller.ts`
 
 ```typescript
 import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
@@ -292,7 +292,7 @@ import { User } from './modules/user/domain/user.entity.js';
 export class AppModule {}
 ```
 
-- [ ] Add ValidationPipe globally — `src/main.ts` — ⚠️ file exists but missing `ValidationPipe` setup
+- [x] Add ValidationPipe globally — `src/main.ts`
 
 ```typescript
 import { NestFactory } from '@nestjs/core';
