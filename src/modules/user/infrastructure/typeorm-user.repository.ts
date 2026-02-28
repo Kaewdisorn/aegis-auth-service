@@ -14,6 +14,7 @@ export class TypeOrmUserRepository implements IUserRepository {
     }
 
     async save(user: Partial<User>): Promise<User> {
+
         const newUser = this.userRepo.create(user);
         return this.userRepo.save(newUser);
     }

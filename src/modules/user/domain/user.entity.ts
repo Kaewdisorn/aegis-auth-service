@@ -6,10 +6,12 @@ import {
     UpdateDateColumn,
 } from 'typeorm';
 
+export const USER_SERVICE_GID = '00000000-0000-0000-0000-000000000001';
+
 @Entity('users')
 export class User {
-    @Column({ type: 'uuid', generated: 'uuid' })
-    gid: string;
+    @Column({ type: 'uuid' })
+    gid: string = USER_SERVICE_GID;
 
     @PrimaryGeneratedColumn('uuid')
     uid: string;
