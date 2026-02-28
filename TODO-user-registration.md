@@ -16,7 +16,7 @@ npm install @nestjs/typeorm typeorm pg
 npm install class-validator class-transformer
 ```
 
-- [ ] Install password hashing library
+- [x] Install password hashing library
 
 ```bash
 npm install bcrypt
@@ -79,7 +79,7 @@ export interface IUserRepository {
 }
 ```
 
-- [ ] Create domain exception — `src/modules/user/domain/exceptions/user-already-exists.exception.ts`
+- [x] Create domain exception — `src/modules/user/domain/exceptions/user-already-exists.exception.ts`
 
 ```typescript
 import { ConflictException } from '@nestjs/common';
@@ -133,7 +133,7 @@ export class UserResponseDto {
 }
 ```
 
-- [ ] Create RegisterUserUseCase — `src/modules/user/application/use-cases/register-user.use-case.ts` — ⚠️ file exists but is an empty class stub
+- [x] Create RegisterUserUseCase — `src/modules/user/application/use-cases/register-user.use-case.ts`
 
 ```typescript
 import { Inject, Injectable } from '@nestjs/common';
