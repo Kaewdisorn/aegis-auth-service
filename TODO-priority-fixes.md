@@ -5,13 +5,9 @@
 - [x] **1. Add `@Injectable()` to `TypeOrmUserRepository`**
 - [x] **2. Fix e2e tests — add `serviceName` to all test payloads**
 - [x] **3. Enable `strict: true` in tsconfig**
+- [x] **4. Add health check + graceful shutdown**
 
 ## Remaining
-
-- [ ] **4. Add health check + graceful shutdown** _(Small)_
-  - Add `@nestjs/terminus` with a DB health indicator (`/health` endpoint)
-  - Call `app.enableShutdownHooks()` in `main.ts` for graceful shutdown
-  - Required for k8s/load balancer readiness probes
 
 - [ ] **5. Add rate limiting, Helmet, CORS** _(Small)_
   - Add `@nestjs/throttler` to prevent brute-force registration
