@@ -20,6 +20,8 @@ async function bootstrap() {
     }),
   );
 
+  app.enableShutdownHooks();
+
   const port = process.env.PORT ?? 3000;
   const host = process.env.HOST ?? 'localhost';
   await app.listen(port, host);

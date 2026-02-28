@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './modules/user/user.module';
+import { HealthModule } from './modules/health/health.module';
 import { User } from './modules/user/domain/user.entity';
 
 @Module({
@@ -22,6 +23,7 @@ import { User } from './modules/user/domain/user.entity';
       }),
     }),
     UserModule,
+    HealthModule,
   ],
 })
 export class AppModule { }
