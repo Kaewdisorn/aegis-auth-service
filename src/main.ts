@@ -1,12 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { WinstonModule } from 'nest-winston';
+import { config } from 'dotenv';
 import { AppModule } from './app.module';
-import { winstonConfig } from './shared/logger/winston.config';
+import { createWinstonConfig } from './shared/logger/winston.config';
+
+config();
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: WinstonModule.createLogger(winstonConfig),
+    logger: WinstonModule.createLogger(createWinstonConfig(process.env.NODE_ENV)),
   });
 
   app.useGlobalPipes(
