@@ -452,7 +452,7 @@ describe('UserController', () => {
 });
 ```
 
-- [ ] E2E test: Registration endpoint — `test/user-registration.e2e-spec.ts`
+- [x] E2E test: Registration endpoint — `test/user-registration.e2e-spec.ts`
 
 ```typescript
 import { Test, TestingModule } from '@nestjs/testing';
