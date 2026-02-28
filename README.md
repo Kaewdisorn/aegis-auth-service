@@ -31,8 +31,32 @@ src/
 ```bash
 npm install
 cp .env.example .env   # configure DB credentials
+```
+
+### Database (Docker Swarm)
+
+```bash
+# Initialize Docker Swarm (skip if already initialized)
+docker swarm init
+
+# Deploy PostgreSQL
+docker stack deploy -c docker-compose.db.yml aegis-db
+
+# Verify it's running
+docker stack services aegis-db
+
+# Start the app
 npm run start:dev
 ```
+
+#### Useful Docker Commands
+
+| Command | Description |
+|---|---|
+| `docker stack services aegis-db` | Check service status |
+| `docker service logs aegis-db_postgres` | View database logs |
+| `docker stack rm aegis-db` | Stop the database |
+| `docker ps -f name=aegis-db` | List running containers |
 
 ## Scripts
 
