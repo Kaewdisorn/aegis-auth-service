@@ -14,7 +14,7 @@ docker swarm init
 
 ## 2. Create Docker Compose File
 
-- [ ] Create `docker-compose.db.yml` in project root
+- [x] Create `docker-compose.db.yml` in project root
 
 ```yaml
 version: "3.8"
@@ -55,7 +55,7 @@ networks:
 
 ## 3. Create Environment Configuration
 
-- [ ] Create `.env` file (already in `.gitignore`)
+- [x] Create `.env` file (already in `.gitignore`)
 
 ```env
 NODE_ENV=development
@@ -67,7 +67,7 @@ DB_PASSWORD=postgres
 DB_DATABASE=aegis_auth
 ```
 
-- [ ] Create `.env.example`
+- [x] Create `.env.example`
 
 ```env
 NODE_ENV=development

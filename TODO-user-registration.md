@@ -23,7 +23,7 @@ npm install bcrypt
 npm install -D @types/bcrypt
 ```
 
-- [ ] Install configuration module
+- [x] Install configuration module
 
 ```bash
 npm install @nestjs/config
@@ -319,7 +319,7 @@ bootstrap();
 
 ## 7. Configuration & Environment
 
-- [ ] Create `.env` file (already in `.gitignore`)
+- [x] Create `.env` file (already in `.gitignore`)
 
 ```env
 NODE_ENV=development
@@ -331,7 +331,7 @@ DB_PASSWORD=postgres
 DB_DATABASE=aegis_auth
 ```
 
-- [ ] Create `.env.example`
+- [x] Create `.env.example`
 
 ```env
 NODE_ENV=development
